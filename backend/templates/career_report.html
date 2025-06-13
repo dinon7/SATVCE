@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Career Report - {{ student_id }}</title>
+</head>
+<body>
+    <h1>Your AI-Powered Career Report</h1>
+    <p class="generated-date">Generated on: {{ generated_date }}</p>
+
+    {% for subject in recommendations %}
+    <div class="subject-card">
+        <div class="subject-header">
+            <h2 class="subject-name">{{ subject.subjectName }}</h2>
+            <div class="subject-code">{{ subject.subjectCode }}</div>
+        </div>
+
+        <div class="subject-description">
+            {{ subject.subjectDescription }}
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <h3>Scaling Score</h3>
+                <p>{{ (subject.scalingScore * 100)|round }}%</p>
+            </div>
+            <div class="stat-item">
+                <h3>Difficulty Rating</h3>
+                <p>{{ subject.difficultyRating }}/5</p>
+            </div>
+            <div class="stat-item">
+                <h3>Popularity Index</h3>
+                <p>{{ subject.popularityIndex }}/100</p>
+            </div>
+            <div class="stat-item">
+                <h3>Median Salary</h3>
+                <p>${{ subject.jobMarketData.salaryMedian|number_format }}</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Related Careers</h3>
+            <div class="tag-list">
+                {% for career in subject.relatedCareers %}
+                <span class="tag">{{ career }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Related Universities</h3>
+            <div class="tag-list">
+                {% for uni in subject.relatedUniversities %}
+                <span class="tag">{{ uni }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Industry Tags</h3>
+            <div class="tag-list">
+                {% for tag in subject.jobMarketData.industryTags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Study Tips</h3>
+            <ul>
+                {% for tip in subject.studyTips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Prerequisites</h3>
+            <ul>
+                {% for prereq in subject.prerequisites %}
+                <li>{{ prereq }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Job Market Trend</h3>
+            <p>{{ subject.jobMarketData.demandTrend }}</p>
+        </div>
+    </div>
+    {% endfor %}
+</body>
+</html> 

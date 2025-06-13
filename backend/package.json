@@ -1,0 +1,21 @@
+{
+  "name": "vce-career-guidance-backend",
+  "version": "1.0.0",
+  "description": "Backend for VCE Career Guidance Platform",
+  "main": "main.py",
+  "scripts": {
+    "dev": "uvicorn main:app --reload --port 8000",
+    "start": "uvicorn main:app --port 8000",
+    "test": "pytest"
+  },
+  "dependencies": {
+    "fastapi": "^0.104.0",
+    "uvicorn": "^0.23.2",
+    "python-dotenv": "^1.0.0",
+    "firebase-admin": "^6.2.0",
+    "pydantic": "^2.4.2"
+  },
+  "devDependencies": {
+    "pytest": "^7.4.3"
+  }
+} 
