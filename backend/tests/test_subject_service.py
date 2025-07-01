@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-from app.services.subject_service import SubjectService
-from app.schemas.subject import Subject, SubjectCreate, SubjectUpdate
+from backend.app.services.subject_service import SubjectService
+from backend.app.schemas.subject import Subject, SubjectCreate, SubjectUpdate
 
 @pytest.fixture
 def mock_firestore_client():

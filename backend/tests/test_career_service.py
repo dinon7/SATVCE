@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-from app.services.career_service import CareerService
-from app.schemas.career import Career, CareerCreate, CareerUpdate
+from backend.app.services.career_service import CareerService
+from backend.app.schemas.career import Career, CareerCreate, CareerUpdate
 
 @pytest.fixture
 def mock_firestore_client():

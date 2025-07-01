@@ -1,161 +1,240 @@
 from typing import List, Optional, Dict, Any
-from firebase_admin import db, auth
-from app.schemas.user import User, UserCreate, UserUpdate
-from app.utils.password import get_password_hash, verify_password
-from app.firebase_init import initialize_firebase
-from app.database.firestore import FirestoreClient
-from datetime import datetime
-from app.models.user import UserInDB, UserResponse
-from app.services.firebase_service import firebase_service
+from datetime import datetime, UTC
+from ..schemas.user import UserCreate, UserUpdate
+from ..utils.password import get_password_hash, verify_password
+from ..models.user import UserInDB, UserResponse
+from .supabase_service import supabase_service
+import logging
+
+logger = logging.getLogger(__name__)
+
+"""
+services/user_service.py - User service logic for VCE Career Guidance backend.
+
+- Purpose: Provides business logic for user CRUD, authentication, and profile management.
+- Major components: UserService class, async CRUD methods, utility functions.
+- Variable scope: Uses class attributes for shared state, local variables in methods, and protected/private attributes for encapsulation.
+"""
 
 class UserService:
+    """Service for user operations using Supabase."""
+
     def __init__(self):
-        initialize_firebase()
-        self.users_ref = db.reference('users')
-        self.db = firebase_service.db
+        self.supabase = supabase_service
 
-    async def get_users(self) -> List[User]:
-        """Get all users"""
-        users_data = self.users_ref.get()
-        if not users_data:
-            return []
-        return [User(**data) for data in users_data.values()]
+    async def get_users(self) -> List[UserResponse]:
+        """Get all users."""
+        try:
+            response = self.supabase.client.table('users').select('*').execute()
+            users = response.data if response.data else []
+            return [UserResponse(**user) for user in users]
+        except Exception as e:
+            raise Exception(f"Failed to get users: {str(e)}")
 
-    async def get_user(self, user_id: str) -> Optional[User]:
-        """Get a specific user by ID"""
-        user_data = self.users_ref.child(user_id).get()
-        if not user_data:
-            return None
-        return User(**user_data)
+    async def get_user(self, user_id: str) -> Optional[UserResponse]:
+        """Get user by ID."""
+        try:
+            response = self.supabase.client.table('users').select('*').eq('id', user_id).single()
+            if not response.data:
+                return None
+            return UserResponse(**response.data)
+        except Exception as e:
+            raise Exception(f"Failed to get user: {str(e)}")
 
-    async def create_user(self, user: UserCreate) -> UserResponse:
+    async def get_user_by_clerk_id(self, clerk_user_id: str) -> Optional[UserResponse]:
+        """Get user by Clerk user ID."""
+        try:
+            response = self.supabase.client.table('users').select('*').eq('clerk_user_id', clerk_user_id).single()
+            if not response.data:
+                return None
+            return UserResponse(**response.data)
+        except Exception as e:
+            raise Exception(f"Failed to get user by Clerk ID: {str(e)}")
+
+    async def create_user(self, user_data: UserCreate) -> UserResponse:
         """Create a new user."""
-        user_dict = user.dict()
-        user_dict["hashed_password"] = get_password_hash(user.password)
-        del user_dict["password"]
-        
-        user_ref = self.db.collection("users").document()
-        user_dict["id"] = user_ref.id
-        user_ref.set(user_dict)
-        
-        return UserResponse(**user_dict)
+        try:
+            # Check if user already exists
+            existing_user = await self.get_user_by_clerk_id(user_data.clerk_user_id)
+            if existing_user:
+                raise ValueError("User already exists")
 
-    async def get_user_by_email(self, email: str) -> Optional[UserResponse]:
-        """Get user by email."""
-        users = self.db.collection("users").where("email", "==", email).limit(1).get()
-        if not users:
-            return None
-        return UserResponse(**users[0].to_dict())
+            user_dict = user_data.dict()
+            user_dict['created_at'] = datetime.now(UTC).isoformat()
+            user_dict['updated_at'] = datetime.now(UTC).isoformat()
 
-    async def authenticate_user(self, email: str, password: str) -> Optional[UserResponse]:
-        """Authenticate user with email and password."""
-        user = await self.get_user_by_email(email)
-        if not user:
-            return None
-        if not verify_password(password, user.hashed_password):
-            return None
-        return user
+            response = self.supabase.client.table('users').insert(user_dict).execute()
+            if not response.data:
+                raise ValueError("Failed to create user")
+
+            return UserResponse(**response.data[0])
+        except Exception as e:
+            raise Exception(f"Failed to create user: {str(e)}")
 
     async def update_user(self, user_id: str, user_data: dict) -> Optional[UserResponse]:
         """Update user data."""
-        user_ref = self.db.collection("users").document(user_id)
-        user_doc = user_ref.get()
-        
-        if not user_doc.exists:
-            return None
+        try:
+            user_data['updated_at'] = datetime.now(UTC).isoformat()
             
-        user_ref.update(user_data)
-        updated_user = user_ref.get()
-        return UserResponse(**updated_user.to_dict())
+            response = self.supabase.client.table('users').update(user_data).eq('id', user_id).execute()
+            if not response.data:
+                return None
+                
+            return UserResponse(**response.data[0])
+        except Exception as e:
+            raise Exception(f"Failed to update user: {str(e)}")
 
     async def delete_user(self, user_id: str) -> bool:
         """Delete user."""
-        user_ref = self.db.collection("users").document(user_id)
-        user_doc = user_ref.get()
-        
-        if not user_doc.exists:
-            return False
+        try:
+            response = self.supabase.client.table('users').delete().eq('id', user_id).execute()
+            return len(response.data) > 0 if response.data else False
+        except Exception as e:
+            raise Exception(f"Failed to delete user: {str(e)}")
+
+    async def get_user_preferences(self, clerk_user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user preferences."""
+        try:
+            user = await self.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                return None
             
-        user_ref.delete()
-        return True
+            response = self.supabase.client.table('user_preferences').select('*').eq('user_id', user.id).single()
+            return response.data if response.data else None
+        except Exception as e:
+            raise Exception(f"Failed to get user preferences: {str(e)}")
+
+    async def update_user_preferences(self, clerk_user_id: str, preferences: Dict[str, Any]) -> bool:
+        """Update user preferences."""
+        try:
+            user = await self.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                return False
+            
+            preferences_data = {
+                'user_id': user.id,
+                'preferences': preferences,
+                'updated_at': datetime.now(UTC).isoformat()
+            }
+            
+            # Try to update existing preferences, insert if not exists
+            response = self.supabase.client.table('user_preferences').upsert(preferences_data).execute()
+            return len(response.data) > 0 if response.data else False
+        except Exception as e:
+            raise Exception(f"Failed to update user preferences: {str(e)}")
+
+    async def get_user_profile(self, clerk_user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user profile."""
+        try:
+            user = await self.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                return None
+            
+            return {
+                'id': user.id,
+                'clerk_user_id': user.clerk_user_id,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'year_level': user.year_level,
+                'is_admin': user.is_admin,
+                'created_at': user.created_at,
+                'updated_at': user.updated_at
+            }
+        except Exception as e:
+            raise Exception(f"Failed to get user profile: {str(e)}")
+
+    async def update_user_profile(self, clerk_user_id: str, profile_data: Dict[str, Any]) -> bool:
+        """Update user profile."""
+        try:
+            user = await self.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                return False
+            
+            profile_data['updated_at'] = datetime.now(UTC).isoformat()
+            
+            response = self.supabase.client.table('users').update(profile_data).eq('id', user.id).execute()
+            return len(response.data) > 0 if response.data else False
+        except Exception as e:
+            raise Exception(f"Failed to update user profile: {str(e)}")
 
     @staticmethod
-    async def create_user(email: str, password: str, name: str, is_admin: bool = False) -> Dict[str, Any]:
-        """Create a new user in Firebase Auth and Firestore."""
+    async def create_user_with_clerk(clerk_user_id: str, email: str, first_name: str, last_name: str, year_level: int = 11) -> Dict[str, Any]:
+        """Create a new user with Clerk authentication."""
         try:
-            # Create user in Firebase Auth
-            user_record = auth.create_user(
-                email=email,
-                password=password,
-                display_name=name
-            )
-
-            # Create user document in Firestore
             user_data = {
-                'uid': user_record.uid,
+                'clerk_user_id': clerk_user_id,
                 'email': email,
-                'name': name,
-                'is_admin': is_admin,
-                'created_at': datetime.utcnow().isoformat(),
-                'updated_at': datetime.utcnow().isoformat()
+                'first_name': first_name,
+                'last_name': last_name,
+                'year_level': year_level,
+                'is_admin': False,
+                'created_at': datetime.now(UTC).isoformat(),
+                'updated_at': datetime.now(UTC).isoformat()
             }
 
-            await FirestoreClient.set_document('users', user_record.uid, user_data)
-            return user_data
+            response = supabase_service.client.table('users').insert(user_data).execute()
+            if not response.data:
+                raise Exception("Failed to create user")
+
+            return response.data[0]
 
         except Exception as e:
             raise Exception(f"Failed to create user: {str(e)}")
 
     @staticmethod
-    async def get_user(uid: str) -> Optional[Dict[str, Any]]:
-        """Get user by UID."""
+    async def get_user_by_clerk_id_static(clerk_user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by Clerk user ID (static method)."""
         try:
-            return await FirestoreClient.get_document('users', uid)
+            response = supabase_service.client.table('users').select('*').eq('clerk_user_id', clerk_user_id).single()
+            return response.data if response.data else None
         except Exception as e:
             raise Exception(f"Failed to get user: {str(e)}")
 
     @staticmethod
-    async def update_user(uid: str, data: Dict[str, Any]) -> bool:
-        """Update user data."""
+    async def update_user_static(clerk_user_id: str, data: Dict[str, Any]) -> bool:
+        """Update user data (static method)."""
         try:
-            data['updated_at'] = datetime.utcnow().isoformat()
-            return await FirestoreClient.update_document('users', uid, data)
+            data['updated_at'] = datetime.now(UTC).isoformat()
+            response = supabase_service.client.table('users').update(data).eq('clerk_user_id', clerk_user_id).execute()
+            return len(response.data) > 0 if response.data else False
         except Exception as e:
             raise Exception(f"Failed to update user: {str(e)}")
 
     @staticmethod
-    async def delete_user(uid: str) -> bool:
-        """Delete user from Firebase Auth and Firestore."""
+    async def delete_user_static(clerk_user_id: str) -> bool:
+        """Delete user (static method)."""
         try:
-            # Delete from Firebase Auth
-            auth.delete_user(uid)
-            
-            # Delete from Firestore
-            return await FirestoreClient.delete_document('users', uid)
+            response = supabase_service.client.table('users').delete().eq('clerk_user_id', clerk_user_id).execute()
+            return len(response.data) > 0 if response.data else False
         except Exception as e:
             raise Exception(f"Failed to delete user: {str(e)}")
 
     @staticmethod
-    async def get_all_users() -> list:
-        """Get all users."""
+    async def get_all_users_static() -> list:
+        """Get all users (static method)."""
         try:
-            return await FirestoreClient.query_documents('users', 'is_admin', '==', False)
+            response = supabase_service.client.table('users').select('*').eq('is_admin', False).execute()
+            return response.data if response.data else []
         except Exception as e:
             raise Exception(f"Failed to get users: {str(e)}")
 
     @staticmethod
-    async def get_all_admins() -> list:
-        """Get all admin users."""
+    async def get_all_admins_static() -> list:
+        """Get all admin users (static method)."""
         try:
-            return await FirestoreClient.query_documents('users', 'is_admin', '==', True)
+            response = supabase_service.client.table('users').select('*').eq('is_admin', True).execute()
+            return response.data if response.data else []
         except Exception as e:
             raise Exception(f"Failed to get admins: {str(e)}")
 
-    @staticmethod
-    async def verify_token(token: str) -> Dict[str, Any]:
-        """Verify Firebase ID token."""
-        try:
-            decoded_token = auth.verify_id_token(token)
-            return decoded_token
-        except Exception as e:
-            raise Exception(f"Failed to verify token: {str(e)}") 
+    def calculate_quiz_score(self, answers: dict) -> int:
+        """
+        Calculate the quiz score based on answers.
+        Args:
+            answers (dict): The user's answers.
+        Returns:
+            int: The calculated score.
+        """
+        # Example logic: 1 point for each non-empty answer
+        return sum(1 for a in answers.values() if a) 

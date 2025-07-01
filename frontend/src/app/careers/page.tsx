@@ -1,116 +1,71 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { animations } from '@/utils/animations';
-import { CareerCard } from '@/components/CareerCard';
-import { CareerDetails } from '@/components/CareerDetails';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { ErrorMessage } from '@/components/ErrorMessage';
-import { useAuth } from '@/contexts/AuthContext';
-import { Career } from '@/types/career';
+import { useState, useEffect } from 'react'
+import { useAuth } from '@clerk/nextjs'
+import { CareerCard } from '@/components/CareerCard'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { ErrorMessage } from '@/components/ErrorMessage'
+import { api } from '@/lib/api'
+
+interface Career {
+  id: string
+  title: string
+  description: string
+  avg_salary: number
+  industry: string
+  required_skills: string[]
+}
 
 export default function CareersPage() {
-    const [careers, setCareers] = useState<Career[]>([]);
-    const [selectedCareer, setSelectedCareer] = useState<Career | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const { user } = useAuth();
+  const [careers, setCareers] = useState<Career[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { getToken } = useAuth()
 
-    useEffect(() => {
-        const fetchCareers = async () => {
-            try {
-                const response = await fetch('/api/careers', {
-                    headers: {
-                        'Authorization': `Bearer ${await user?.getIdToken()}`
-                    }
-                });
-                if (!response.ok) throw new Error('Failed to fetch careers');
-                const data = await response.json();
-                setCareers(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'An error occurred');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchCareers();
-    }, [user]);
-
-    if (loading) {
-        return (
-            <motion.div
-                className="flex justify-center items-center min-h-screen"
-                {...animations.fadeIn}
-            >
-                <LoadingSpinner />
-            </motion.div>
-        );
+  useEffect(() => {
+    const fetchCareers = async () => {
+      try {
+        setLoading(true)
+        const token = await getToken()
+        const response = await api<Career[]>('/api/v1/careers', { requiresAuth: true }, token || undefined)
+        setCareers(response)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'An unknown error occurred'
+        setError(`Failed to fetch careers: ${message}`)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    if (error) {
-        return (
-            <motion.div
-                className="flex justify-center items-center min-h-screen"
-                {...animations.errorAnimation}
-            >
-                <ErrorMessage message={error} />
-            </motion.div>
-        );
-    }
+    fetchCareers()
+  }, [getToken])
 
+  if (loading) {
     return (
-        <motion.div
-            className="container mx-auto px-4 py-8"
-            {...animations.pageTransition}
-        >
-            <motion.h1
-                className="text-4xl font-bold mb-8 text-center"
-                {...animations.fadeIn}
-            >
-                Explore Career Paths
-            </motion.h1>
+      <div className="flex justify-center items-center h-64">
+        <LoadingSpinner />
+      </div>
+    )
+  }
 
-            <motion.div
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                {...animations.staggerContainer}
-            >
-                <AnimatePresence>
-                    {careers.map((career) => (
-                        <motion.div
-                            key={career.id}
-                            {...animations.cardHover}
-                            onClick={() => setSelectedCareer(career)}
-                        >
-                            <CareerCard career={career} />
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </motion.div>
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <ErrorMessage message={error} />
+      </div>
+    )
+  }
 
-            <AnimatePresence>
-                {selectedCareer && (
-                    <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                    >
-                        <motion.div
-                            className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                        >
-                            <CareerDetails
-                                career={selectedCareer}
-                                onClose={() => setSelectedCareer(null)}
-                            />
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.div>
-    );
-} 
+  return (
+    <div className="px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">Explore Careers</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {careers.map(career => (
+            <CareerCard key={career.id} career={career} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

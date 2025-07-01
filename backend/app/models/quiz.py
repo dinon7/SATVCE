@@ -30,11 +30,15 @@ class QuizResponse(BaseModel):
 class QuizResult(BaseModel):
     """Quiz result model"""
     user_id: str
-    stage1_results: Dict[str, Any]
+    initial_answers: Optional[Dict[str, Any]] = None
+    follow_up_answers: Optional[Dict[str, Any]] = None
+    recommendations: Optional[Dict[str, Any]] = None
+    stage: Optional[str] = None
+    stage1_results: Optional[Dict[str, Any]] = None
     stage2_results: Optional[Dict[str, Any]] = None
-    recommended_subjects: List[str] = []
-    recommended_careers: List[str] = []
-    confidence_score: float = 0.0
+    recommended_subjects: Optional[List[str]] = None
+    recommended_careers: Optional[List[str]] = None
+    confidence_score: Optional[float] = None
 
 class QuizResultInDB(QuizResult, TimestampModel):
     """Quiz result as stored in database"""

@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, UTC
 
 class Course:
     """Course model for Firebase"""
@@ -33,7 +33,7 @@ class Course:
         self.study_mode = study_mode
         self.prerequisites = prerequisites or []
         self.career_outcomes = career_outcomes or []
-        self.created_at = created_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(UTC)
         self.updated_at = updated_at
 
     def to_dict(self) -> dict:

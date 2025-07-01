@@ -11,6 +11,13 @@ export default function HomePage() {
     const { user } = useAuth();
 
     const handleAction = (path: string) => {
+        // Allow direct access to quiz regardless of auth status
+        if (path === '/quiz') {
+            router.push(path);
+            return;
+        }
+        
+        // For other actions, check auth status
         if (user) {
             router.push('/dashboard');
         } else {
@@ -33,7 +40,7 @@ export default function HomePage() {
                 >
                     <div className="absolute inset-0 -z-10">
                         <OptimizedImage
-                            src="/images/hero/hero-bg-1920x1080.jpg"
+                            src="/images/hero/hero-bg-1920x1080.svg"
                             alt="Hero background"
                             fill
                             priority
@@ -106,19 +113,19 @@ export default function HomePage() {
                             title: "AI-Powered Career Quiz",
                             description: "Get personalized career recommendations based on your interests and skills.",
                             icon: "🎯",
-                            image: "/images/features/quiz-800x600.jpg"
+                            image: "/images/features/quiz-800x600.svg"
                         },
                         {
                             title: "Subject Selection Guide",
                             description: "Find the perfect VCE subjects that align with your career goals.",
                             icon: "📚",
-                            image: "/images/features/subjects-800x600.jpg"
+                            image: "/images/features/subjects-800x600.svg"
                         },
                         {
                             title: "University Course Matching",
                             description: "Discover university courses that match your selected subjects and career path.",
                             icon: "🎓",
-                            image: "/images/features/courses-800x600.jpg"
+                            image: "/images/features/courses-800x600.svg"
                         }
                     ].map((feature, index) => (
                         <motion.div

@@ -15,7 +15,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         animate="animate"
         exit="exit"
         variants={pageTransition}
-        className="min-h-screen bg-gray-50"
+        className="flex-grow"
       >
         {children}
       </motion.div>

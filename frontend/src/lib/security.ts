@@ -5,7 +5,6 @@
  * implementing various security measures and best practices.
  */
 
-import { getAuth } from 'firebase/auth';
 import { error } from './logging';
 
 // Security configuration
@@ -13,7 +12,6 @@ const SECURITY_CONFIG = {
   SESSION_TIMEOUT: 30 * 60 * 1000, // 30 minutes
   MAX_LOGIN_ATTEMPTS: 5,
   PASSWORD_MIN_LENGTH: 8,
-  TOKEN_REFRESH_INTERVAL: 10 * 60 * 1000, // 10 minutes
 };
 
 // Security state
@@ -32,9 +30,6 @@ export const initializeSecurity = (): void => {
 
   // Set up session timeout check
   setInterval(checkSessionTimeout, 60000); // Check every minute
-
-  // Set up token refresh
-  setInterval(refreshAuthToken, SECURITY_CONFIG.TOKEN_REFRESH_INTERVAL);
 };
 
 /**
@@ -59,27 +54,10 @@ const checkSessionTimeout = (): void => {
  */
 const handleSessionTimeout = async (): Promise<void> => {
   try {
-    const auth = getAuth();
-    if (auth.currentUser) {
-      await auth.signOut();
-      window.location.href = '/login?timeout=true';
-    }
+    // Clerk will handle session timeout
+    window.location.href = '/sign-in?timeout=true';
   } catch (err) {
     error('Failed to handle session timeout', err);
-  }
-};
-
-/**
- * Refresh authentication token
- */
-const refreshAuthToken = async (): Promise<void> => {
-  try {
-    const auth = getAuth();
-    if (auth.currentUser) {
-      await auth.currentUser.getIdToken(true);
-    }
-  } catch (err) {
-    error('Failed to refresh auth token', err);
   }
 };
 

@@ -1,141 +1,73 @@
+'use client';
+
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Input } from '../Input';
-import { Button } from '../Button';
-import { animations } from '@/styles/animations';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@clerk/nextjs';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
 
 interface TaskFormProps {
-    onTaskCreated?: () => void;
+  onTaskAdded: () => void;
 }
 
-export const TaskForm = ({ onTaskCreated }: TaskFormProps) => {
-    const { user } = useAuth();
-    const [formData, setFormData] = useState({
-        title: '',
-        description: '',
-        dueDate: ''
-    });
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+export default function TaskForm({ onTaskAdded }: TaskFormProps) {
+  const { user, isLoaded } = useUser();
+  const [title, setTitle] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
 
-        setLoading(true);
-        setError(null);
+    setLoading(true);
+    setError(null);
 
-        try {
-            const response = await fetch('/api/tasks', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${await user.getIdToken()}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    userId: user.uid,
-                    status: 'pending'
-                })
-            });
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title }),
+      });
 
-            if (!response.ok) {
-                throw new Error('Failed to create task');
-            }
+      if (!response.ok) {
+        throw new Error('Failed to add task');
+      }
 
-            // Reset form
-            setFormData({
-                title: '',
-                description: '',
-                dueDate: ''
-            });
+      setTitle('');
+      onTaskAdded();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            // Notify parent component
-            onTaskCreated?.();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
+  if (!isLoaded) {
+    return <LoadingSpinner />;
+  }
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
-    return (
-        <motion.form
-            onSubmit={handleSubmit}
-            className="space-y-4"
-            variants={animations.fade.in}
+  return (
+    <form onSubmit={handleSubmit} className="mb-4">
+      {error && <ErrorMessage message={error} />}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Add a new task..."
+          className="flex-1 p-2 border rounded"
+          required
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
         >
-            {error && (
-                <motion.div
-                    className="p-4 bg-error-50 text-error-600 rounded-lg"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    {error}
-                </motion.div>
-            )}
-
-            <Input
-                label="Task Title"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="Enter task title"
-                required
-                disabled={loading}
-            />
-
-            <Input
-                label="Description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Enter task description"
-                required
-                disabled={loading}
-            />
-
-            <Input
-                label="Due Date"
-                name="dueDate"
-                type="date"
-                value={formData.dueDate}
-                onChange={handleChange}
-                required
-                disabled={loading}
-            />
-
-            <div className="flex justify-end space-x-2">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setFormData({
-                        title: '',
-                        description: '',
-                        dueDate: ''
-                    })}
-                    disabled={loading}
-                >
-                    Clear
-                </Button>
-                <Button
-                    type="submit"
-                    variant="primary"
-                    loading={loading}
-                    disabled={loading}
-                >
-                    Create Task
-                </Button>
-            </div>
-        </motion.form>
-    );
-}; 
+          {loading ? 'Adding...' : 'Add Task'}
+        </button>
+      </div>
+    </form>
+  );
+} 

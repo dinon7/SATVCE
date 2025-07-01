@@ -1,191 +1,630 @@
-'use client'
+"use client"
 
-import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import GlobalLayout from '@/components/GlobalLayout';
-
-interface CareerRecommendation {
-  title: string
-  description: string
-  subjects: string[]
-  confidence: number
-}
-
-interface QuizResults {
-  recommendations: CareerRecommendation[]
-  study_resources: string[]
-}
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import GlobalLayout from "@/components/GlobalLayout"
+import { useQuizResults } from "@/hooks/useQuizResults"
+import { Button } from "@/components/ui/button"
+import { Loader2, AlertCircle, Download, RefreshCw, ThumbsUp, ThumbsDown, Save, Home } from "lucide-react"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { motion, AnimatePresence } from "framer-motion"
+import { useState, useEffect } from "react"
+import { useToast } from "@/components/ui/use-toast"
+import { useCareerRecommendations } from '@/hooks/useCareerRecommendations'
+import { useQuiz } from '@/contexts/QuizContext'
+import { apiClient } from "@/lib/api"
+import { CareerRecommendation, CareerReport, SubjectRecommendation } from "@/types/career"
 
 export default function QuizResultsPage() {
-  const searchParams = useSearchParams()
-  const [recommendedSubjects, setRecommendedSubjects] = useState<string[]>([])
-  const [recommendedCareers, setRecommendedCareers] = useState<string[]>([])
+  const router = useRouter()
+  const { toast } = useToast()
+  const { answers } = useQuiz()
+
+  const { loading, error, recommendations, fetchRecommendations } = useCareerRecommendations()
+  const [careers, setCareers] = useState<CareerRecommendation[]>([])
+  const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({})
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [showReport, setShowReport] = useState(false)
+  const [report, setReport] = useState<CareerReport | null>(null)
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
 
   useEffect(() => {
-    // Read recommendations from query parameters
-    const subjectsParam = searchParams.get('subjects')
-    const careersParam = searchParams.get('careers')
-
-    if (subjectsParam) {
-      setRecommendedSubjects(subjectsParam.split(',').map(item => item.trim()).filter(item => item.length > 0))
+    // Only fetch recommendations if we have answers and haven't fetched yet
+    if (answers.length > 0 && recommendations.length === 0 && !loading && !error) {
+      fetchRecommendations({ answers })
     }
+  }, [answers, fetchRecommendations, recommendations.length, loading, error])
 
-    if (careersParam) {
-      setRecommendedCareers(careersParam.split(',').map(item => item.trim()).filter(item => item.length > 0))
+  useEffect(() => {
+    if (recommendations.length > 0) {
+      setCareers(recommendations)
     }
+  }, [recommendations])
 
-    // TODO: Implement fetching from Firestore for detailed information if needed
-    // This would involve fetching descriptions, images, detailed scores, reviews, etc.
+  // Load saved preferences on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const preferences = await apiClient.getCareerPreferences();
+        setCareers(prevCareers =>
+          prevCareers.map(career => ({
+            ...career,
+            isInterested: preferences.find(p => p.career_title === career.title)?.is_interested
+          }))
+        );
+      } catch (error) {
+        console.error('Failed to load preferences:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your saved preferences.",
+          variant: "destructive",
+        });
+      }
+    };
 
-  }, [searchParams]) // Rerun effect when query params change
+    if (recommendations.length > 0) {
+      loadPreferences();
+    }
+  }, [recommendations, toast]);
 
-  // Helper function to render subject/career cards
-  const renderRecommendationCard = (item: string, type: 'subject' | 'career') => {
-      // Placeholder image - replace with dynamic image URL if available later
-      const placeholderImage = type === 'subject' 
-        ? "https://lh3.googleusercontent.com/aida-public/AB6AXuBczoMPJOhbISjqzD8N2tuWMeYOay6QdP3FDN6-pSj_TfnQ5fJdzW3I7TLepPhjnlV0ZlUO88PP_pp4T4kXF2Ev3fwEYQ_QqeGs6DCsn-iERICbgpf7tV-UtGDsPbxV7FeQTT5tzOsZq5eg41jST9FesPgd4eQzaypGP__u37_T_-d2GTuxHqrtNmNJqUF065m-gXE_3ZIqhaDCWtVQomConogvApfrs_WQRgaB_KMy8f6KZU7O6Gh7VRn9TkHh4lMv3FT42AGd0wqe" // Chemistry image from design
-        : "https://lh3.googleusercontent.com/aida-public/AB6AXuA3j0MdK0JFmMYzcL65l2Ym9nl5enZ4uuwDaFfEv5L8kilxuaTZBZohyR3DhaA__l2zbJ18BBlAtwhqrS83nMuJJkmYpY_0e6a_hb6LA5IksUYsU1Ci2Q0VIATg0cloVMg0DKX3PkzL7tVkF5PmDZr7xd6j9k1vlWvg-umG4tUbfhtySRm1mfFvzDmaeyzBJ6rjG3VH2uApCa5JiKc1hId-j7vlU4riGbqotj3WtlEkD5fNX6KZo4y4Y7YnEbUwIFxmI-OtsFf5myDl-vW7oczd634QeYWZFCtLtPhSkWYBUnXOi"; // Physics image from design
-      
-      // Placeholder description and related tags - replace with dynamic data later
-      const placeholderDescription = `This is a placeholder description for ${item}. Detailed information would be fetched here.`;
-      const placeholderTags = [`Tag1 for ${item}`, `Tag2 for ${item}`];
-      
-      // Placeholder scoring and review data - replace with dynamic data later
-      const placeholderScalingScore = Math.floor(Math.random() * 31) + 70; // Random score between 70 and 100
-      const placeholderReviews = Math.floor(Math.random() * 101) + 50; // Random reviews between 50 and 150
-      const placeholderRating = (Math.random() * (5 - 3.5) + 3.5).toFixed(1); // Random rating between 3.5 and 5
-      
-      const renderStars = (rating: number) => {
-          const stars = [];
-          for (let i = 0; i < 5; i++) {
-              if (i < Math.floor(rating)) {
-                  stars.push(
-                      <div key={i} className="text-[#0b80ee]" data-icon="Star" data-size="18px" data-weight="fill">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 256 256">
-                              <path d="M234.5,114.38l-45.1,39.36,13.51,58.6a16,16,0,0,1-23.84,17.34l-51.11-31-51,31a16,16,0,0,1-23.84-17.34L66.61,153.8,21.5,114.38a16,16,0,0,1,9.11-28.06l59.46-5.15,23.21-55.36a15.95,15.95,0,0,1,29.44,0h0L166,81.17l59.44,5.15a16,16,0,0,1,9.11,28.06Z"></path>
-                          </svg>
-                      </div>
-                  );
-              } else if (i === Math.floor(rating) && rating % 1 !== 0) {
-                   // Simple half-star representation - can be improved with a dedicated half-star icon
-                   stars.push(
-                       <div key={i} className="text-[#0b80ee]" data-icon="StarHalf" data-size="18px" data-weight="fill">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 256 256"><path d="M128,216a7.92,7.92,0,0,1-3.94-1.08l-51-31L60.17,212.34A16,16,0,0,1,36.33,195l13.51-58.6L4.7,114.38a16,16,0,0,1,9.11-28.09l59.46-5.15L96.53,25.81h0a15.95,15.95,0,0,1,29.44,0L149.2,81.14l59.46,5.15a16,16,0,0,1,9.11,28.09L202.38,136,151.31,167.05a8,8,0,0,1-3.93,1.07ZM128,180.81V40l23.2,55.29a16,16,0,0,1,13.35,9.75L224,102.26l-45.07,39.33a16,16,0,0,0-5.08,15.71l13.5,58.6L128,180.81Z"></path></svg>
-                       </div>
-                   );
-              }
-              else {
-                   stars.push(
-                       <div key={i} className="text-[#0b80ee]" data-icon="Star" data-size="18px" data-weight="regular">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 256 256"><path d="M239.2,97.29a16,16,0,0,0-13.81-11L166,81.17,142.72,25.81h0a15.95,15.95,0,0,0-29.44,0L90.07,81.17,30.61,86.32a16,16,0,0,0-9.11,28.06L66.61,153.8,53.09,212.34a16,16,0,0,0,23.84,17.34l51-31,51.11,31a16,16,0,0,0,23.84-17.34l-13.51-58.6,45.1-39.36A16,16,0,0,0,239.2,97.29Zm-15.22,5-45.1,39.36a16,16,0,0,0-5.08,15.71L187.35,216v0l-51.07-31a15.9,15.9,0,0,0-16.54,0l-51,31h0L82.2,157.4a16,16,0,0,0-5.08-15.71L32,102.35a.37.37,0,0,1,0-.09l59.44-5.14a16,16,0,0,0,13.35-9.75L128,32.08l23.2,55.29a16,16,0,0,0,13.35,9.75L224,102.26S224,102.32,224,102.33Z"></path></svg>
-                       </div>
-                   );
-              }
-          }
-          return stars;
-      };
+  const handleInterestToggle = async (careerTitle: string, isInterested: boolean) => {
+    // Don't allow multiple simultaneous saves for the same career
+    if (isSaving[careerTitle]) return;
 
-      const renderReviewBreakdown = (percentage: number) => (
-          <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-[#cedce8]">
-              <div className="rounded-full bg-[#0b80ee]" style={{ width: `${percentage}%` }}></div>
-          </div>
+    try {
+      setIsSaving(prev => ({ ...prev, [careerTitle]: true }));
+
+      // Update local state optimistically
+      setCareers(prevCareers =>
+        prevCareers.map(career =>
+          career.title === careerTitle
+            ? { ...career, isInterested }
+            : career
+        )
       );
 
-      // Placeholder percentages for reviews - replace with dynamic data later
-      const placeholderReviewPercentages = [40, 30, 15, 10, 5]; // For a 5-star rating system example
+      // Save to backend
+      await apiClient.saveCareerPreference(careerTitle, isInterested);
 
-      return (
-          <div key={item} className="p-4">
-              <div className="flex items-stretch justify-between gap-4 rounded-xl">
-                  <div className="flex flex-[2_2_0px] flex-col gap-4">
-                      <div className="flex flex-col gap-1">
-                          <p className="text-[#49749c] text-sm font-normal leading-normal">{type === 'subject' ? 'Recommended Subject' : 'Recommended Career'}</p> {/* Indicate if Subject or Career */}
-                          <p className="text-[#0d151c] text-base font-bold leading-tight">{item}</p> {/* Display the actual subject/career name */}
-                          <p className="text-[#49749c] text-sm font-normal leading-normal">{placeholderDescription}</p>
-                      </div>
-                      <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 flex-row-reverse bg-[#e7edf4] text-[#0d151c] pr-2 gap-1 text-sm font-medium leading-normal w-fit">
-                          <div className="text-[#0d151c]" data-icon="Heart" data-size="18px" data-weight="regular">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 256 256"><path d="M178,32c-20.65,0-38.73,8.88-50,23.89C116.73,40.88,98.65,32,78,32A62.07,62.07,0,0,0,16,94c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,220.66,240,164,240,94A62.07,62.07,0,0,0,178,32ZM128,206.8C109.74,196.16,32,147.69,32,94A46.06,46.06,0,0,1,78,48c19.45,0,35.78,10.36,42.6,27a8,8,0,0,0,14.8,0c6.82-16.67,23.15-27,42.6-27a46.06,46.06,0,0,1,46,46C224,147.61,146.24,196.15,128,206.8Z"></path></svg>
-                          </div>
-                          <span className="truncate">Save to Preferences</span>
-                      </button>
-                  </div>
-                  <div className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1" style={{ backgroundImage: `url("${placeholderImage}")` }}></div>
-              </div>
-              {/* Related Tags */}
-              <div className="flex gap-3 p-3 flex-wrap pr-4">
-                  {placeholderTags.map(tag => (
-                       <div key={tag} className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#e7edf4] pl-4 pr-4">
-                          <p className="text-[#0d151c] text-sm font-medium leading-normal">{tag}</p>
-                      </div>
-                  ))}
-              </div>
-              {/* Scaling Score */}
-              <div className="flex flex-col gap-3 p-4">
-                  <div className="flex gap-6 justify-between">
-                      <p className="text-[#0d151c] text-base font-medium leading-normal">Scaling Score</p>
-                      <p className="text-[#0d151c] text-sm font-normal leading-normal">{placeholderScalingScore}%</p>
-                  </div>
-                  <div className="rounded bg-[#cedce8]"><div className="h-2 rounded bg-[#0b80ee]" style={{ width: `${placeholderScalingScore}%` }}></div></div>
-              </div>
-              {/* Review Breakdown */}
-              <div className="flex flex-wrap gap-x-8 gap-y-6 p-4">
-                  <div className="flex flex-col gap-2">
-                      <p className="text-[#0d151c] text-4xl font-black leading-tight tracking-[-0.033em]">{placeholderRating}</p>
-                      <div className="flex gap-0.5">
-                          {renderStars(parseFloat(placeholderRating))}
-                      </div>
-                      <p className="text-[#0d151c] text-base font-normal leading-normal">{placeholderReviews} reviews</p>
-                  </div>
-                  <div className="grid min-w-[200px] max-w-[400px] flex-1 grid-cols-[20px_1fr_40px] items-center gap-y-3">
-                      {[5, 4, 3, 2, 1].map((star, index) => (
-                          <>
-                              <p key={`star-${star}-label`} className="text-[#0d151c] text-sm font-normal leading-normal">{star}</p>
-                              {renderReviewBreakdown(placeholderReviewPercentages[index])} {/* Using placeholder percentages */} 
-                              <p key={`star-${star}-percent`} className="text-[#49749c] text-sm font-normal leading-normal text-right">{placeholderReviewPercentages[index]}%</p> {/* Using placeholder percentages */} 
-                          </>
-                      ))}
-                  </div>
-              </div>
-          </div>
+      toast({
+        title: "Preference Saved",
+        description: `Marked ${careerTitle} as ${isInterested ? 'interested' : 'not interested'}.`,
+      });
+    } catch (error) {
+      // Revert local state on error
+      setCareers(prevCareers =>
+        prevCareers.map(career =>
+          career.title === careerTitle
+            ? { ...career, isInterested: !isInterested }
+            : career
+        )
       );
+
+      toast({
+        title: "Error",
+        description: "Failed to save preference. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(prev => ({ ...prev, [careerTitle]: false }));
+    }
   };
+
+  const handleSavePreferences = async () => {
+    try {
+      const interestedCareers = careers.filter(career => career.isInterested)
+      // TODO: Implement API call to save preferences
+      toast({
+        title: "Preferences Saved",
+        description: "Your career preferences have been saved successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save preferences. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleGenerateReport = async () => {
+    try {
+      setIsGeneratingReport(true);
+      const selectedCareers = recommendations
+        .filter(career => career.isInterested)
+        .map(career => career.title);
+      
+      if (selectedCareers.length === 0) {
+        toast({
+          title: "No careers selected",
+          description: "Please select at least one career to generate a report.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const reportData = await apiClient.getCareerReport(selectedCareers);
+      setReport(reportData);
+      setShowReport(true);
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    try {
+      setIsDownloading(true);
+
+      // Get the selected careers (those marked as interested)
+      const selectedCareers = careers
+        .filter(career => career.isInterested)
+        .map(career => career.title);
+
+      if (selectedCareers.length === 0) {
+        toast({
+          title: "No Careers Selected",
+          description: "Please mark at least one career as interested to generate a report.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Download the PDF from the correct endpoint
+      const pdfResponse = await fetch('/api/reports/career/pdf', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/pdf',
+        },
+      });
+
+      if (!pdfResponse.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await pdfResponse.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `career_report_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Report Downloaded",
+        description: "Your career report has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download the report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const renderRecommendationCard = (career: CareerRecommendation) => {
+    const isSavingCareer = isSaving[career.title];
+
+    return (
+      <motion.div
+        key={career.title}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="p-6 mb-6 hover:shadow-lg transition-shadow">
+          <div className="space-y-6">
+            {/* Header Section */}
+            <div className="flex justify-between items-start">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-gray-900">{career.title}</h3>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-sm">
+                    {Math.round(career.confidence * 100)}% Match
+                  </Badge>
+                  <Progress value={career.confidence} className="w-32" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => handleInterestToggle(career.title, true)}
+                  className="flex items-center gap-2"
+                  disabled={isSavingCareer}
+                >
+                  {isSavingCareer ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ThumbsUp className="h-4 w-4" />
+                  )}
+                  Interested
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleInterestToggle(career.title, false)}
+                  className="flex items-center gap-2"
+                  disabled={isSavingCareer}
+                >
+                  {isSavingCareer ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ThumbsDown className="h-4 w-4" />
+                  )}
+                  Not Interested
+                </Button>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="prose max-w-none">
+              <p className="text-gray-600">{career.description}</p>
+            </div>
+
+            {/* Career Details Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Required Skills */}
+              <div className="space-y-3">
+                <h4 className="text-lg font-semibold text-gray-900">Required Skills</h4>
+                <div className="flex flex-wrap gap-2">
+                  {career.requiredSkills.map((skill, index) => (
+                    <Badge key={index} variant="secondary" className="text-sm">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Education Requirements */}
+              <div className="space-y-3">
+                <h4 className="text-lg font-semibold text-gray-900">Education Requirements</h4>
+                <ul className="list-disc list-inside space-y-1 text-gray-600">
+                  {career.educationRequirements.map((req, index) => (
+                    <li key={index}>{req}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Job Outlook */}
+              <div className="space-y-3">
+                <h4 className="text-lg font-semibold text-gray-900">Job Outlook</h4>
+                <p className="text-gray-600">{career.jobOutlook}</p>
+              </div>
+
+              {/* Salary Range */}
+              <div className="space-y-3">
+                <h4 className="text-lg font-semibold text-gray-900">Salary Range</h4>
+                <p className="text-gray-600">{career.salaryRange}</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <GlobalLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-12 h-12 animate-spin mx-auto text-blue-600" />
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-gray-900">Generating Your Career Report</h2>
+              <p className="text-gray-600">We're analyzing your answers to provide personalized career recommendations...</p>
+            </div>
+          </div>
+        </div>
+      </GlobalLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <GlobalLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center space-y-4 max-w-md">
+            <AlertCircle className="w-12 h-12 mx-auto text-red-600" />
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-gray-900">Something Went Wrong</h2>
+              <p className="text-gray-600">{error}</p>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <Button onClick={() => router.push("/quiz/1")}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Retake Quiz
+              </Button>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+      </GlobalLayout>
+    )
+  }
+
+  if (!recommendations.length) {
+    return (
+      <GlobalLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center space-y-4">
+            <AlertCircle className="w-12 h-12 mx-auto text-yellow-600" />
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-gray-900">No Results Found</h2>
+              <p className="text-gray-600">Please complete the quiz to get your career recommendations.</p>
+            </div>
+            <Button onClick={() => router.push("/quiz/1")}>
+              Start Quiz
+            </Button>
+          </div>
+        </div>
+      </GlobalLayout>
+    )
+  }
 
   return (
     <GlobalLayout>
-      <div className="px-40 flex flex-1 justify-center py-5">
-        <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
-
-          <div className="flex flex-wrap justify-between gap-3 p-4">
-            <p className="text-[#0d151c] tracking-light text-[32px] font-bold leading-tight min-w-72">Your AI-Powered Career Report</p>
-            <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 bg-[#e7edf4] text-[#0d151c] text-sm font-medium leading-normal">
-              <span className="truncate">Download</span>
-            </button>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Your Career Recommendations</h1>
+            <p className="text-gray-600 mt-2">
+              Based on your quiz answers, we've identified these potential career paths for you.
+            </p>
           </div>
-
-          {recommendedSubjects.length > 0 && (
-              <div className="mt-6">
-                  <h3 className="text-xl font-bold text-gray-900 px-4 mb-4">Recommended Subjects</h3>
-                  {recommendedSubjects.map(subject => renderRecommendationCard(subject, 'subject'))}
-              </div>
-          )}
-
-          {recommendedCareers.length > 0 && (
-              <div className="mt-6">
-                   <h3 className="text-xl font-bold text-gray-900 px-4 mb-4">Recommended Careers</h3>
-                  {recommendedCareers.map(career => renderRecommendationCard(career, 'career'))}
-              </div>
-          )}
-
-          {recommendedSubjects.length === 0 && recommendedCareers.length === 0 && (
-              <div className="p-4 text-center text-gray-600">
-                  No recommendations available yet. Please complete the quiz.
-              </div>
-          )}
-
+          <div className="flex gap-4">
+            <Button
+              onClick={handleGenerateReport}
+              disabled={isGeneratingReport || careers.length === 0}
+              className="flex items-center gap-2"
+            >
+              {isGeneratingReport ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              View Full Report
+            </Button>
+            <Button
+              onClick={handleDownloadReport}
+              disabled={isDownloading || careers.length === 0}
+              className="flex items-center gap-2"
+            >
+              {isDownloading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Download Report
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/dashboard")}
+              className="flex items-center gap-2"
+            >
+              <Home className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
+
+        {/* Career Recommendations */}
+        <div className="space-y-6">
+          {careers.map((career) => renderRecommendationCard(career))}
+        </div>
+
+        {/* Full Report Modal */}
+        {showReport && report && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
+              <div className="p-6 border-b flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Your Career Report</h2>
+                <div className="text-sm text-gray-500">
+                  Generated on {new Date(report.generated_at).toLocaleDateString()}
+                </div>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-8rem)]">
+                <div className="space-y-8">
+                  {/* Career Recommendations */}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Career Recommendations</h3>
+                    <div className="space-y-4">
+                      {report.recommendations?.map((career) => (
+                        <Card key={career.title} className="p-4">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h4 className="text-lg font-semibold">{career.title}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="secondary" className="text-sm">
+                                  {Math.round(career.confidence * 100)}% Match
+                                </Badge>
+                                <Progress value={career.confidence} className="w-32" />
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant={career.isInterested ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleInterestToggle(career.title, true)}
+                                disabled={isSaving[career.title]}
+                                className="flex items-center gap-2"
+                              >
+                                {isSaving[career.title] ? (
+                                  <span className="animate-spin">⟳</span>
+                                ) : (
+                                  <span>👍</span>
+                                )}
+                                Interested
+                              </Button>
+                              <Button
+                                variant={career.isInterested === false ? "destructive" : "outline"}
+                                size="sm"
+                                onClick={() => handleInterestToggle(career.title, false)}
+                                disabled={isSaving[career.title]}
+                                className="flex items-center gap-2"
+                              >
+                                {isSaving[career.title] ? (
+                                  <span className="animate-spin">⟳</span>
+                                ) : (
+                                  <span>👎</span>
+                                )}
+                                Not Interested
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="text-gray-600 mb-4">{career.description}</p>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <h5 className="font-medium mb-2">Required Skills</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {career.requiredSkills.map((skill, index) => (
+                                  <Badge key={index} variant="secondary" className="text-sm">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <h5 className="font-medium mb-2">Education Requirements</h5>
+                              <ul className="list-disc list-inside text-gray-600">
+                                {career.educationRequirements.map((req, index) => (
+                                  <li key={index}>{req}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Subject Recommendations */}
+                  {report.subject_recommendations && (
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4">Recommended Subjects</h3>
+                      <div className="space-y-4">
+                        {report.subject_recommendations.map((subject) => (
+                          <Card key={subject.subjectCode} className="p-4">
+                            <div className="flex justify-between items-start mb-4">
+                              <div>
+                                <h4 className="text-lg font-semibold">{subject.subjectName}</h4>
+                                <p className="text-sm text-gray-500">{subject.subjectCode}</p>
+                              </div>
+                              <div className="flex gap-4">
+                                <div className="text-center">
+                                  <div className="text-sm text-gray-500">Scaling Score</div>
+                                  <div className="text-lg font-semibold">
+                                    {(subject.scalingScore * 100).toFixed(0)}%
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-sm text-gray-500">Difficulty</div>
+                                  <div className="text-lg font-semibold">
+                                    {subject.difficultyRating}/5
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-sm text-gray-500">Popularity</div>
+                                  <div className="text-lg font-semibold">
+                                    {subject.popularityIndex}/100
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <p className="text-gray-600 mb-4">{subject.subjectDescription}</p>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <h5 className="font-medium mb-2">Study Tips</h5>
+                                <ul className="list-disc list-inside text-gray-600">
+                                  {subject.studyTips.map((tip, index) => (
+                                    <li key={index}>{tip}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div>
+                                <h5 className="font-medium mb-2">Prerequisites</h5>
+                                <ul className="list-disc list-inside text-gray-600">
+                                  {subject.prerequisites.map((prereq, index) => (
+                                    <li key={index}>{prereq}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                            <div className="mt-4">
+                              <h5 className="font-medium mb-2">Job Market Data</h5>
+                              <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                  <div className="text-sm text-gray-500">Median Salary</div>
+                                  <div className="text-lg font-semibold">
+                                    ${subject.jobMarketData.salaryMedian.toLocaleString()}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-sm text-gray-500">Demand Trend</div>
+                                  <div className="text-lg font-semibold">
+                                    {subject.jobMarketData.demandTrend}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-sm text-gray-500">Industry Tags</div>
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {subject.jobMarketData.industryTags.map((tag, index) => (
+                                      <Badge key={index} variant="outline" className="text-sm">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Study Resources */}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Study Resources</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {report.study_resources.map((resource, index) => (
+                        <Card key={index} className="p-4">
+                          <h4 className="text-lg font-semibold mb-2">Resource {index + 1}</h4>
+                          <p className="text-gray-600">{resource}</p>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 border-t flex justify-end gap-4">
+                <Button variant="outline" onClick={handleDownloadReport}>
+                  <span className="mr-2">⬇️</span>
+                  Download Report
+                </Button>
+                <Button onClick={() => setShowReport(false)}>Close</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </GlobalLayout>
-  );
+  )
 } 

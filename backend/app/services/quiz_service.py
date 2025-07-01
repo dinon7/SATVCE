@@ -1,21 +1,79 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime, UTC
 from fastapi import HTTPException
-from firebase_admin import db
-from app.models.quiz import QuizQuestion, QuizResult
-from app.services.ai_service import AIService
-from app.services.firebase_service import firebase_service
-from app.services.ai import generate_follow_up_questions, generate_recommendations
-from app.database.firestore import FirestoreClient
+from ..models.quiz import QuizQuestion, QuizResult
+from ..services.ai_service import AIService
+from ..services.supabase_service import supabase_service
+from ..services.ai import generate_recommendations
+import logging
+
+logger = logging.getLogger(__name__)
 
 class QuizService:
     def __init__(self):
         self.ai_service = AIService()
 
     async def get_initial_questions(self) -> List[QuizQuestion]:
-        """Get initial questions from Firebase"""
-        questions_data = firebase_service.get_subjects().get('questions', [])
-        return [QuizQuestion(**q) for q in questions_data]
+        """Get initial questions from Supabase"""
+        try:
+            # Get questions from Supabase resources table
+            resources = await supabase_service.get_all_resources(type="quiz_question")
+            questions_data = resources if resources else []
+            
+            # Fallback to predefined questions if none in database
+            if not questions_data:
+                return [
+                    QuizQuestion(
+                        id="q1",
+                        text="How confident are you in your career choice?",
+                        type="slider",
+                        min_value=1,
+                        max_value=5
+                    ),
+                    QuizQuestion(
+                        id="q2",
+                        text="Have you thought about a specific career path?",
+                        type="multiple_choice",
+                        options=["Yes", "No", "Not sure"]
+                    ),
+                    QuizQuestion(
+                        id="q3",
+                        text="Which VCE subjects are you considering?",
+                        type="multiple_choice",
+                        options=[
+                            "English", "Mathematics", "Science", "History",
+                            "Languages", "Arts", "Technology", "Other"
+                        ]
+                    ),
+                ]
+            
+            return [QuizQuestion(**q) for q in questions_data]
+        except Exception as e:
+            # Fallback to predefined questions on error
+            return [
+                QuizQuestion(
+                    id="q1",
+                    text="How confident are you in your career choice?",
+                    type="slider",
+                    min_value=1,
+                    max_value=5
+                ),
+                QuizQuestion(
+                    id="q2",
+                    text="Have you thought about a specific career path?",
+                    type="multiple_choice",
+                    options=["Yes", "No", "Not sure"]
+                ),
+                QuizQuestion(
+                    id="q3",
+                    text="Which VCE subjects are you considering?",
+                    type="multiple_choice",
+                    options=[
+                        "English", "Mathematics", "Science", "History",
+                        "Languages", "Arts", "Technology", "Other"
+                    ]
+                ),
+            ]
 
     async def get_question_by_id(self, question_id: str) -> Optional[QuizQuestion]:
         """Get a specific question by ID"""
@@ -38,91 +96,162 @@ class QuizService:
         
         return False
 
-    async def save_initial_answers(self, user_id: str, answers: Dict[str, Any]) -> QuizResult:
+    async def save_initial_answers(self, clerk_user_id: str, answers: Dict[str, Any]) -> QuizResult:
         """Save initial answers and prepare for follow-up questions"""
-        # Save to Firebase
-        firebase_service.save_quiz_results(user_id, {
-            'initial_answers': answers,
-            'stage': 'initial',
-            'created_at': datetime.now(UTC).isoformat(),
-            'updated_at': datetime.now(UTC).isoformat()
-        })
-        
-        return QuizResult(
-            user_id=user_id,
-            initial_answers=answers,
-            stage='initial'
-        )
-
-    async def save_follow_up_answers(self, user_id: str, answers: Dict[str, Any]) -> QuizResult:
-        """Save follow-up answers and prepare for recommendations"""
-        # Get initial answers
-        initial_results = firebase_service.get_quiz_results(user_id)
-        if not initial_results or 'initial_answers' not in initial_results:
-            raise ValueError("Initial answers not found")
-        
-        # Save to Firebase
-        firebase_service.save_quiz_results(user_id, {
-            'initial_answers': initial_results['initial_answers'],
-            'follow_up_answers': answers,
-            'stage': 'follow_up',
-            'updated_at': datetime.now(UTC).isoformat()
-        })
-        
-        return QuizResult(
-            user_id=user_id,
-            initial_answers=initial_results['initial_answers'],
-            follow_up_answers=answers,
-            stage='follow_up'
-        )
-
-    async def get_all_answers(self, user_id: str) -> Dict[str, Any]:
-        """Get all answers for a user"""
-        results = firebase_service.get_quiz_results(user_id)
-        if not results:
-            return {}
-        
-        all_answers = {
-            'initial': results.get('initial_answers', {}),
-            'follow_up': results.get('follow_up_answers', {})
-        }
-        
-        return all_answers
-
-    async def get_quiz_results(self, user_id: str) -> Optional[QuizResult]:
-        """Get complete quiz results including recommendations"""
-        results = firebase_service.get_quiz_results(user_id)
-        if not results:
-            return None
-        
-        recommendations = firebase_service.get_recommendations(user_id)
-        
-        return QuizResult(
-            user_id=user_id,
-            initial_answers=results.get('initial_answers', {}),
-            follow_up_answers=results.get('follow_up_answers', {}),
-            recommendations=recommendations,
-            stage=results.get('stage', 'initial')
-        )
-
-    async def save_recommendations(self, user_id: str, recommendations: Dict[str, Any]) -> None:
-        """Save recommendations to Firebase"""
-        firebase_service.save_recommendations(user_id, recommendations)
-
-    async def record_initial_answers(
-        self,
-        user_id: str,
-        answers: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Record initial quiz answers and generate follow-up questions"""
         try:
-            # Save to Firebase
-            firebase_service.save_quiz_results(user_id, {
+            # Get user ID from Supabase
+            user = await supabase_service.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                raise ValueError("User not found")
+            
+            user_id = user['id']
+            
+            # Save to Supabase quiz_results table
+            quiz_data = {
+                'user_id': user_id,
                 'initial_answers': answers,
                 'stage': 'initial',
                 'created_at': datetime.now(UTC).isoformat(),
                 'updated_at': datetime.now(UTC).isoformat()
-            })
+            }
+            
+            await supabase_service._post("quiz_results", quiz_data)
+        
+            return QuizResult(
+                user_id=clerk_user_id,
+                initial_answers=answers,
+                stage='initial'
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to save initial answers: {str(e)}"
+            )
+
+    async def save_all_answers(self, clerk_user_id: str, answers: Dict[str, Any]) -> QuizResult:
+        """Save all answers (quiz + followup) and prepare for recommendations"""
+        try:
+            # Get user ID from Supabase
+            user = await supabase_service.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                raise ValueError("User not found")
+            
+            user_id = user['id']
+            
+            # Separate quiz answers from followup answers
+            quiz_answers = {}
+            followup_answers = {}
+            
+            for key, value in answers.items():
+                if key.startswith('q'):
+                    quiz_answers[key] = value
+                else:
+                    followup_answers[key] = value
+            
+            # Save to Supabase quiz_results table
+            quiz_data = {
+                'user_id': user_id,
+                'initial_answers': quiz_answers,
+                'follow_up_answers': followup_answers,
+                'stage': 'completed',
+                'created_at': datetime.now(UTC).isoformat(),
+                'updated_at': datetime.now(UTC).isoformat()
+            }
+            
+            await supabase_service._post("quiz_results", quiz_data)
+        
+            return QuizResult(
+                user_id=clerk_user_id,
+                initial_answers=quiz_answers,
+                follow_up_answers=followup_answers,
+                stage='completed'
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to save all answers: {str(e)}"
+            )
+
+    async def get_all_answers(self, clerk_user_id: str) -> Dict[str, Any]:
+        """Get all answers for a user"""
+        try:
+            # Get user ID from Supabase
+            user = await supabase_service.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                return {}
+            
+            user_id = user['id']
+            
+            # Get quiz results from Supabase
+            params = {"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": 1}
+            response = await supabase_service._get("quiz_results", params)
+            
+            if not response:
+                return {}
+        
+            result = response[0]
+            
+            all_answers = {
+                'initial': result.get('initial_answers', {}),
+                'follow_up': result.get('follow_up_answers', {})
+            }
+        
+            return all_answers
+        except Exception as e:
+            return {}
+
+    async def get_quiz_results(self, clerk_user_id: str) -> Optional[QuizResult]:
+        """Get complete quiz results including recommendations"""
+        try:
+            # Get user ID from Supabase
+            user = await supabase_service.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                return None
+            
+            user_id = user['id']
+            
+            # Get quiz results from Supabase
+            params = {"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": 1}
+            response = await supabase_service._get("quiz_results", params)
+            
+            if not response:
+                return None
+        
+            result = response[0]
+            
+            # Get recommendations from career_reports table
+            career_params = {"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": 1}
+            career_response = await supabase_service._get("career_reports", career_params)
+            recommendations = career_response[0]['content'] if career_response else None
+        
+            return QuizResult(
+                user_id=clerk_user_id,
+                initial_answers=result.get('initial_answers', {}),
+                follow_up_answers=result.get('follow_up_answers', {}),
+                recommendations=recommendations,
+                stage=result.get('stage', 'initial')
+            )
+        except Exception as e:
+            return None
+
+    async def save_recommendations(self, clerk_user_id: str, recommendations: Dict[str, Any]) -> None:
+        """Save recommendations to Supabase"""
+        try:
+            await supabase_service.save_career_report(clerk_user_id, recommendations)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to save recommendations: {str(e)}"
+            )
+
+    async def record_initial_answers(
+        self,
+        clerk_user_id: str,
+        answers: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Record initial quiz answers and generate follow-up questions"""
+        try:
+            result = await self.save_initial_answers(clerk_user_id, answers)
             return answers
         except Exception as e:
             raise HTTPException(
@@ -130,133 +259,51 @@ class QuizService:
                 detail=f"Failed to record initial answers: {str(e)}"
             )
 
-    async def record_follow_up_answers(
-        self,
-        user_id: str,
-        answers: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Record follow-up answers and generate recommendations"""
-        try:
-            # Get initial answers
-            initial_results = firebase_service.get_quiz_results(user_id)
-            if not initial_results:
-                raise HTTPException(
-                    status_code=404,
-                    detail="No initial answers found for this user"
-                )
-
-            # Get user's current subjects
-            user_data = firebase_service.get_user(user_id)
-            current_subjects = user_data.get('quiz_results', {}).get('current_subjects', [])
-
-            # Clear any existing cached recommendations
-            await self.ai_service.clear_user_cache(user_id)
-
-            # Generate recommendations using AI
-            quiz_analysis = await self.ai_service.analyze_quiz_responses(
-                user_id,
-                {
-                    "stage1": initial_results.get('initial_answers', {}),
-                    "stage2": answers
-                }
-            )
-
-            subject_recommendations = await self.ai_service.generate_subject_recommendations(
-                user_id,
-                quiz_analysis,
-                current_subjects
-            )
-
-            career_recommendations = await self.ai_service.generate_career_recommendations(
-                user_id,
-                quiz_analysis,
-                subject_recommendations
-            )
-
-            study_resources = await self.ai_service.generate_study_resources(
-                user_id,
-                subject_recommendations,
-                [career["title"] for career in career_recommendations]
-            )
-
-            # Save all data to Firebase
-            firebase_service.save_quiz_results(user_id, {
-                'initial_answers': initial_results.get('initial_answers', {}),
-                'follow_up_answers': answers,
-                'stage': 'follow_up',
-                'recommended_subjects': subject_recommendations,
-                'career_recommendations': career_recommendations,
-                'study_resources': study_resources,
-                'updated_at': datetime.now(UTC).isoformat()
-            })
-
-            return {
-                'follow_up_answers': answers,
-                'recommended_subjects': subject_recommendations,
-                'career_recommendations': career_recommendations,
-                'study_resources': study_resources
-            }
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to record follow-up answers: {str(e)}"
-            )
-
-    async def get_combined_quiz_data(self, user_id: str) -> Dict[str, Any]:
-        """Get complete quiz data including recommendations"""
-        try:
-            quiz_response = firebase_service.get_quiz_results(user_id)
-
-            if not quiz_response:
-                raise HTTPException(
-                    status_code=404,
-                    detail="No quiz data found for this user"
-                )
-
-            return {
-                "stage1_results": quiz_response.get('initial_answers', {}),
-                "stage2_results": quiz_response.get('follow_up_answers', {}),
-                "recommended_subjects": quiz_response.get('recommended_subjects', []),
-                "recommended_careers": quiz_response.get('career_recommendations', []),
-                "study_resources": quiz_response.get('study_resources', []),
-                "is_complete": True
-            }
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to retrieve quiz data: {str(e)}"
-            )
-
     @staticmethod
-    async def save_quiz_result(user_id: str, answers: Dict[int, str], 
+    async def save_quiz_result(clerk_user_id: str, answers: Dict[int, str], 
                              recommendations: List[str], score: Optional[float] = None) -> Dict[str, Any]:
         """Save quiz results for a user."""
         try:
+            # Get user ID from Supabase
+            user = await supabase_service.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                raise ValueError("User not found")
+            
+            user_id = user['id']
+            
             result_data = {
                 'user_id': user_id,
                 'answers': answers,
                 'recommendations': recommendations,
                 'score': score,
-                'created_at': datetime.utcnow().isoformat()
+                'created_at': datetime.now(UTC).isoformat()
             }
 
-            # Generate a unique ID for the result
-            result_id = f"{user_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            # Save to Supabase
+            response = await supabase_service._post("quiz_results", result_data)
             
-            await FirestoreClient.set_document('quiz_results', result_id, result_data)
-            return {**result_data, 'id': result_id}
+            return {**result_data, 'id': response[0]['id'] if response else None}
 
         except Exception as e:
             raise Exception(f"Failed to save quiz result: {str(e)}")
 
     @staticmethod
-    async def get_user_results(user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_results(clerk_user_id: str) -> List[Dict[str, Any]]:
         """Get all quiz results for a user."""
         try:
-            results = await FirestoreClient.query_documents('quiz_results', 'user_id', '==', user_id)
-            return sorted(results, key=lambda x: x['created_at'], reverse=True)
+            # Get user ID from Supabase
+            user = await supabase_service.get_user_by_clerk_id(clerk_user_id)
+            if not user:
+                return []
+            
+            user_id = user['id']
+            
+            # Get results from Supabase
+            params = {"user_id": f"eq.{user_id}", "order": "created_at.desc"}
+            response = await supabase_service._get("quiz_results", params)
+            
+            return response if response else []
+            
         except Exception as e:
             raise Exception(f"Failed to get user results: {str(e)}")
 
@@ -264,8 +311,9 @@ class QuizService:
     async def get_result(result_id: str) -> Optional[Dict[str, Any]]:
         """Get a specific quiz result."""
         try:
-            result = await FirestoreClient.get_document('quiz_results', result_id)
-            return {**result, 'id': result_id} if result else None
+            params = {"id": f"eq.{result_id}"}
+            response = await supabase_service._get("quiz_results", params)
+            return response[0] if response else None
         except Exception as e:
             raise Exception(f"Failed to get result: {str(e)}")
 
@@ -273,39 +321,269 @@ class QuizService:
     async def delete_result(result_id: str) -> bool:
         """Delete a quiz result."""
         try:
-            return await FirestoreClient.delete_document('quiz_results', result_id)
+            await supabase_service._delete("quiz_results", {"id": result_id})
+            return True
         except Exception as e:
             raise Exception(f"Failed to delete result: {str(e)}")
 
     @staticmethod
     async def get_all_results() -> List[Dict[str, Any]]:
-        """Get all quiz results (admin only)."""
+        """Get all quiz results."""
         try:
-            results = await FirestoreClient.query_documents('quiz_results', 'created_at', '!=', None)
-            return sorted(results, key=lambda x: x['created_at'], reverse=True)
+            response = await supabase_service._get("quiz_results", {})
+            return response if response else []
         except Exception as e:
             raise Exception(f"Failed to get all results: {str(e)}")
 
     @staticmethod
     async def get_recommendations(answers: Dict[int, str]) -> List[str]:
-        """Generate career recommendations based on quiz answers."""
+        """Get recommendations based on quiz answers."""
         try:
-            # Get all careers
-            careers = await FirestoreClient.query_documents('careers', 'active', '==', True)
-            
-            # Simple scoring system (can be enhanced)
-            career_scores = {}
-            for career in careers:
-                score = 0
-                for question_id, answer in answers.items():
-                    if str(question_id) in career.get('matching_answers', {}):
-                        if career['matching_answers'][str(question_id)] == answer:
-                            score += 1
-                career_scores[career['id']] = score
-            
-            # Get top 3 recommendations
-            top_careers = sorted(career_scores.items(), key=lambda x: x[1], reverse=True)[:3]
-            return [career['title'] for career in careers if career['id'] in [c[0] for c in top_careers]]
-            
+            # This would typically call an AI service
+            # For now, return placeholder recommendations
+            return [
+                "Consider exploring STEM subjects",
+                "Look into business and economics",
+                "Research healthcare careers"
+            ]
         except Exception as e:
-            raise Exception(f"Failed to generate recommendations: {str(e)}") 
+            raise Exception(f"Failed to get recommendations: {str(e)}")
+
+    async def save_quiz_result(self, user_id: str, quiz_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Save quiz result with improved datetime handling"""
+        try:
+            quiz_result = {
+                'user_id': user_id,
+                'quiz_data': quiz_data,
+                'created_at': datetime.now(UTC).isoformat()
+            }
+            result = await supabase_service._post("quiz_results", quiz_result)
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Error saving quiz result: {str(e)}")
+            raise 
+
+class QuizManager:
+    """Quiz manager for handling initial questions, followup questions, and results"""
+    
+    def __init__(self):
+        self.quiz_service = QuizService()
+    
+    async def fetch_initial_questions(self) -> List[QuizQuestion]:
+        """Fetch the initial 25 quiz questions"""
+        try:
+            # Return the predefined 25 questions from schemas
+            from ..schemas.quiz import INITIAL_QUESTIONS
+            return INITIAL_QUESTIONS
+        except Exception as e:
+            logger.error(f"Error fetching initial questions: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to fetch initial questions: {str(e)}"
+            )
+    
+    async def record_initial_answers(self, student_id: str, answers: Dict[str, Any]) -> Dict[str, Any]:
+        """Record initial quiz answers"""
+        try:
+            # Save initial answers to database
+            await self.quiz_service.save_initial_answers(student_id, answers)
+            return answers
+        except Exception as e:
+            logger.error(f"Error recording initial answers: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to record initial answers: {str(e)}"
+            )
+    
+    async def get_follow_up_questions(self, student_id: str) -> List[QuizQuestion]:
+        """Generate followup questions based on initial answers"""
+        try:
+            # Get the initial answers for this student
+            all_answers = await self.quiz_service.get_all_answers(student_id)
+            initial_answers = all_answers.get('initial', {})
+            
+            # Generate followup questions based on initial answers
+            followup_questions = await self._generate_followup_questions(initial_answers)
+            
+            return followup_questions
+        except Exception as e:
+            logger.error(f"Error getting followup questions: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to get followup questions: {str(e)}"
+            )
+    
+    async def _generate_followup_questions(self, initial_answers: Dict[str, Any]) -> List[QuizQuestion]:
+        """Generate followup questions based on initial answers"""
+        followup_questions = []
+        
+        # Analyze initial answers to determine followup questions
+        subjects_mentioned = initial_answers.get('q15', [])  # VCE subjects
+        career_confidence = initial_answers.get('q2', 3)  # Career confidence
+        dream_job = initial_answers.get('q13', '')  # Dream job
+        strongest_areas = initial_answers.get('q10', [])  # Strongest academic areas
+        
+        # Question 1: If they mentioned specific subjects, ask about depth
+        if subjects_mentioned and len(subjects_mentioned) > 0:
+            followup_questions.append(QuizQuestion(
+                id="f1",
+                text="How deeply have you researched the subjects you're considering for VCE?",
+                type="multiple_choice",
+                options=[
+                    "I've done extensive research",
+                    "I've done some research",
+                    "I've done minimal research",
+                    "I haven't researched yet"
+                ]
+            ))
+        
+        # Question 2: If they have a dream job, ask about steps
+        if dream_job and dream_job.strip():
+            followup_questions.append(QuizQuestion(
+                id="f2",
+                text=f"Regarding your dream job of '{dream_job}', what steps have you taken to learn more about it?",
+                type="multiple_choice",
+                options=[
+                    "I've researched the requirements",
+                    "I've talked to people in the field",
+                    "I've done work experience",
+                    "I've only thought about it"
+                ]
+            ))
+        
+        # Question 3: If they're not confident, ask about concerns
+        if career_confidence < 3:
+            followup_questions.append(QuizQuestion(
+                id="f3",
+                text="What are your main concerns about choosing a career path?",
+                type="multiple_choice",
+                options=[
+                    "I don't know what I'm good at",
+                    "I'm worried about job security",
+                    "I'm not sure about the salary",
+                    "I'm afraid of making the wrong choice",
+                    "Other"
+                ]
+            ))
+        
+        # Question 4: If they mentioned STEM subjects, ask about specific interests
+        stem_subjects = ['Mathematics', 'Further Mathematics', 'Mathematical Methods', 'Specialist Mathematics', 'Biology', 'Chemistry', 'Physics']
+        if any(subject in subjects_mentioned for subject in stem_subjects):
+            followup_questions.append(QuizQuestion(
+                id="f4",
+                text="Which area of STEM interests you the most?",
+                type="multiple_choice",
+                options=[
+                    "Mathematics and statistics",
+                    "Biology and life sciences",
+                    "Chemistry and materials",
+                    "Physics and engineering",
+                    "Computer science and technology"
+                ]
+            ))
+        
+        # Question 5: If they mentioned business subjects, ask about career goals
+        business_subjects = ['Business Management', 'Accounting', 'Economics']
+        if any(subject in subjects_mentioned for subject in business_subjects):
+            followup_questions.append(QuizQuestion(
+                id="f5",
+                text="What type of business career interests you?",
+                type="multiple_choice",
+                options=[
+                    "Management and leadership",
+                    "Finance and accounting",
+                    "Marketing and sales",
+                    "Entrepreneurship",
+                    "Human resources"
+                ]
+            ))
+        
+        # Question 6: If they mentioned arts subjects, ask about creative interests
+        arts_subjects = ['Art', 'Studio Arts', 'Media', 'Music']
+        if any(subject in subjects_mentioned for subject in arts_subjects):
+            followup_questions.append(QuizQuestion(
+                id="f6",
+                text="What type of creative work interests you?",
+                type="multiple_choice",
+                options=[
+                    "Visual arts and design",
+                    "Digital media and film",
+                    "Music and performance",
+                    "Writing and communication",
+                    "Fashion and textiles"
+                ]
+            ))
+        
+        # Question 7: General question about work experience
+        followup_questions.append(QuizQuestion(
+            id="f7",
+            text="Have you done any work experience or part-time work?",
+            type="multiple_choice",
+            options=[
+                "Yes, in a field I'm interested in",
+                "Yes, but not in my field of interest",
+                "No, but I plan to",
+                "No, and I don't plan to"
+            ]
+        ))
+        
+        return followup_questions
+    
+    async def get_combined_quiz_data(self, student_id: str) -> Dict[str, Any]:
+        """Get combined quiz data including initial answers, followup answers, and results"""
+        try:
+            # Get all answers
+            all_answers = await self.quiz_service.get_all_answers(student_id)
+            
+            # Get quiz results
+            quiz_result = await self.quiz_service.get_quiz_results(student_id)
+            
+            # Generate recommendations if not already present
+            recommendations = None
+            if quiz_result and not quiz_result.recommendations:
+                all_answers_combined = {**all_answers.get('initial', {}), **all_answers.get('follow_up', {})}
+                recommendations = await generate_recommendations(all_answers_combined)
+            
+            return {
+                'student_id': student_id,
+                'initial_answers': all_answers.get('initial', {}),
+                'followup_answers': all_answers.get('follow_up', {}),
+                'recommendations': recommendations or (quiz_result.recommendations if quiz_result else None),
+                'completed': bool(all_answers.get('initial') and all_answers.get('follow_up'))
+            }
+        except Exception as e:
+            logger.error(f"Error getting combined quiz data: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to get combined quiz data: {str(e)}"
+            )
+    
+    async def submit_quiz(self, student_id: str) -> Dict[str, Any]:
+        """Submit the complete quiz and generate final results"""
+        try:
+            # Get all answers
+            all_answers = await self.quiz_service.get_all_answers(student_id)
+            
+            # Combine all answers
+            combined_answers = {**all_answers.get('initial', {}), **all_answers.get('follow_up', {})}
+            
+            # Generate recommendations
+            recommendations = await generate_recommendations(combined_answers)
+            
+            # Save all answers and recommendations
+            result = await self.quiz_service.save_all_answers(student_id, combined_answers)
+            await self.quiz_service.save_recommendations(student_id, recommendations)
+            
+            return {
+                'student_id': student_id,
+                'initial_answers': all_answers.get('initial', {}),
+                'followup_answers': all_answers.get('follow_up', {}),
+                'recommendations': recommendations,
+                'completed': True
+            }
+        except Exception as e:
+            logger.error(f"Error submitting quiz: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to submit quiz: {str(e)}"
+            ) 

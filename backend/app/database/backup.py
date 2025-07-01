@@ -1,23 +1,71 @@
 import os
 import json
-from datetime import datetime
-from typing import Dict, List
-from firebase_admin import firestore
+from datetime import datetime, UTC
+from typing import Dict, List, Any
 from google.cloud import storage
 import logging
 
 logger = logging.getLogger(__name__)
 
+# NOTE: This file is deprecated and not used in production. All backups should use Supabase/Postgres.
+
 class DatabaseBackup:
-    def __init__(self, bucket_name: str = None):
+    """Database backup service with improved datetime handling"""
+    
+    def __init__(self, bucket_name: str = None, backup_dir: str = "backups"):
         self.bucket_name = bucket_name or os.getenv('BACKUP_BUCKET_NAME')
         self.storage_client = storage.Client()
         self.bucket = self.storage_client.bucket(self.bucket_name)
+        self.backup_dir = backup_dir
+        os.makedirs(backup_dir, exist_ok=True)
+
+    def create_backup_metadata(self, tables: List[str]) -> Dict[str, Any]:
+        """Create backup metadata with improved datetime handling"""
+        return {
+            'backup_date': datetime.now(UTC).isoformat(),
+            'tables': tables,
+            'version': '1.0',
+            'timestamp': datetime.now(UTC).isoformat(),
+        }
+
+    def generate_backup_filename(self) -> str:
+        """Generate backup filename with improved datetime handling"""
+        timestamp = datetime.now(UTC).strftime('%Y%m%d_%H%M%S')
+        return f"backup_{timestamp}.json"
+
+    def save_backup(self, data: Dict[str, Any], filename: str = None) -> str:
+        """Save backup data with improved error handling"""
+        try:
+            if not filename:
+                filename = self.generate_backup_filename()
+            
+            filepath = os.path.join(self.backup_dir, filename)
+            with open(filepath, 'w') as f:
+                json.dump(data, f, indent=2, default=str)
+            
+            logger.info(f"Backup saved successfully: {filepath}")
+            return filepath
+        except Exception as e:
+            logger.error(f"Error saving backup: {str(e)}")
+            raise
+
+    def load_backup(self, filename: str) -> Dict[str, Any]:
+        """Load backup data with improved error handling"""
+        try:
+            filepath = os.path.join(self.backup_dir, filename)
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+            
+            logger.info(f"Backup loaded successfully: {filepath}")
+            return data
+        except Exception as e:
+            logger.error(f"Error loading backup: {str(e)}")
+            raise
 
     async def backup_collection(self, collection_name: str) -> str:
         """Backup a single collection to GCS."""
         try:
-            db = firestore.client()
+            # REMOVED: db = firestore.client()
             collection = db.collection(collection_name)
             docs = collection.stream()
             
@@ -73,7 +121,7 @@ class DatabaseBackup:
             documents = backup_data['documents']
             
             # Restore documents
-            db = firestore.client()
+            # REMOVED: db = firestore.client()
             collection = db.collection(collection_name)
             
             batch = db.batch()

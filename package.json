@@ -1,12 +1,36 @@
 {
+  "name": "vce-career-guidance",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
   "dependencies": {
-    "firebase": "^11.8.1",
-    "firebase-admin": "^13.4.0",
-    "react-hot-toast": "^2.5.2",
-    "zod": "^3.25.56"
+    "@clerk/nextjs": "^4.29.9",
+    "@headlessui/react": "^1.7.18",
+    "@heroicons/react": "^2.1.1",
+    "@tailwindcss/forms": "^0.5.7",
+    "autoprefixer": "^10.4.17",
+    "axios": "^1.6.7",
+    "chart.js": "^4.4.1",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.0.8",
+    "next": "14.1.0",
+    "postcss": "^8.4.35",
+    "react": "^18",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   },
   "devDependencies": {
-    "@types/react-beautiful-dnd": "^13.1.8",
-    "@types/testing-library__jest-dom": "^5.14.9"
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.1.0"
   }
 }

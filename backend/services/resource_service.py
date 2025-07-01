@@ -1,7 +1,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from ..db.models import Resource
-from ..schemas.resource import ResourceCreate, ResourceResponse
+from db.models import Resource
+from schemas.resource import ResourceCreate, ResourceResponse
 from datetime import datetime
 
 def get_resources(db: Session, tag: Optional[str] = None) -> List[ResourceResponse]:

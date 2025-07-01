@@ -1,15 +1,13 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from firebase_admin import db
-
-from app.models.subject import SubjectCreate, SubjectUpdate, SubjectResponse
-from app.services.auth import get_current_user
-from app.models.user import UserResponse
+from ..services.subject_service import SubjectService
+from ..services.auth import get_current_user
+from ..schemas.subject import Subject, SubjectCreate, SubjectUpdate
 
 router = APIRouter()
-subjects_ref = db.reference('subjects')
+subject_service = SubjectService()
 
-@router.get("/subjects", response_model=List[SubjectResponse])
+@router.get("/", response_model=List[Subject])
 async def list_subjects(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
@@ -18,66 +16,75 @@ async def list_subjects(
     search: Optional[str] = None
 ):
     """List all subjects with optional filtering"""
-    subjects_data = subjects_ref.get()
-    if not subjects_data:
-        return []
-    
-    subjects = []
-    for id, data in list(subjects_data.items())[skip:skip + limit]:
-        subject = SubjectResponse.from_dict(data, id)
-        if min_scaling and subject.scaling < min_scaling:
-            continue
-        if max_difficulty and subject.difficulty > max_difficulty:
-            continue
-        if search and search.lower() not in subject.name.lower():
-            continue
-        subjects.append(subject)
-    return subjects
+    try:
+        arrSubjects = await subject_service.get_subjects()
+        arrFiltered = []
+        for objSubject in arrSubjects:
+            if min_scaling and getattr(objSubject, 'scaling', None) is not None and objSubject.scaling < min_scaling:
+                continue
+            if max_difficulty and getattr(objSubject, 'difficulty', None) is not None and objSubject.difficulty > max_difficulty:
+                continue
+            if search and search.lower() not in objSubject.name.lower():
+                continue
+            arrFiltered.append(objSubject)
+        return arrFiltered[skip:skip+limit]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/subjects/{subject_id}", response_model=SubjectResponse)
+@router.get("/{subject_id}", response_model=Subject)
 async def get_subject(subject_id: str):
     """Get a specific subject by ID"""
-    subject_data = subjects_ref.child(subject_id).get()
-    if not subject_data:
-        raise HTTPException(status_code=404, detail="Subject not found")
-    return SubjectResponse.from_dict(subject_data, subject_id)
+    try:
+        objSubject = await subject_service.get_subject(subject_id)
+        if not objSubject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        return objSubject
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/subjects", response_model=SubjectResponse)
+@router.post("/", response_model=Subject)
 async def create_subject(
     subject: SubjectCreate,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Create a new subject (admin only)"""
-    if not current_user.is_admin:
+    if not current_user.get('is_admin'):
         raise HTTPException(status_code=403, detail="Not authorized")
-    
-    subject_data = subject.dict()
-    result = subjects_ref.push(subject_data)
-    return SubjectResponse.from_dict(subject_data, result.key)
+    try:
+        objSubject = await subject_service.create_subject(subject)
+        return objSubject
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/subjects/{subject_id}", response_model=SubjectResponse)
+@router.put("/{subject_id}", response_model=Subject)
 async def update_subject(
     subject_id: str,
     subject: SubjectUpdate,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Update a subject (admin only)"""
-    if not current_user.is_admin:
+    if not current_user.get('is_admin'):
         raise HTTPException(status_code=403, detail="Not authorized")
-    
-    subject_data = subject.dict(exclude_unset=True)
-    subjects_ref.child(subject_id).update(subject_data)
-    updated_data = subjects_ref.child(subject_id).get()
-    return SubjectResponse.from_dict(updated_data, subject_id)
+    try:
+        objSubject = await subject_service.update_subject(subject_id, subject)
+        if not objSubject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        return objSubject
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/subjects/{subject_id}")
+@router.delete("/{subject_id}")
 async def delete_subject(
     subject_id: str,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Delete a subject (admin only)"""
-    if not current_user.is_admin:
+    if not current_user.get('is_admin'):
         raise HTTPException(status_code=403, detail="Not authorized")
-    
-    subjects_ref.child(subject_id).delete()
-    return {"message": "Subject deleted successfully"} 
+    try:
+        blnDeleted = await subject_service.delete_subject(subject_id)
+        if not blnDeleted:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        return {"message": "Subject deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) 

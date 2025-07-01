@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
 
 // Define types client-side if backend schemas are not directly accessible
 interface SuggestionResult {
@@ -33,69 +35,61 @@ interface ClientResourceResponse {
     createdAt: string;
 }
 
-
-const SuggestionsAndResourcesPage = () => {
-  const { user, loading: authLoading, getAuthToken } = useAuth();
+export default function SuggestionsPage() {
+  const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const router = useRouter();
-  const [suggestions, setSuggestions] = useState<ClientSuggestionResponse | null>(null);
-  const [resources, setResources] = useState<ClientResourceResponse[]>([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
-  const [loadingResources, setLoadingResources] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [resources, setResources] = useState<ClientResourceResponse[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  // Redirect if not authenticated
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
+    if (!isLoaded) return;
+
+    if (!user) {
+      router.push('/sign-in');
+      return;
     }
-  }, [authLoading, user, router]);
 
-  // Fetch Suggestions
-  useEffect(() => {
     const fetchSuggestions = async () => {
-      if (!user) return; // Don't fetch if not authenticated
-      
       try {
-        const authToken = await getAuthToken();
-        if (!authToken) {
-          setError('Authentication required');
-          setLoadingSuggestions(false);
-          return;
-        }
-
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/suggestions`, {
+        const token = await getToken();
+        const response = await fetch('/api/suggestions', {
           headers: {
-            'Authorization': `Bearer ${authToken}`
+            Authorization: `Bearer ${token}`,
           },
         });
 
         if (!response.ok) {
-          if (response.status === 401) {
-            setError('Authentication required. Please log in.');
-          } else {
-            setError(`Error fetching suggestions: ${response.statusText}`);
-          }
-          setLoadingSuggestions(false);
-          return;
+          throw new Error('Failed to fetch suggestions');
         }
 
-        const data: ClientSuggestionResponse = await response.json();
+        const data = await response.json();
         setSuggestions(data);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
-        setLoadingSuggestions(false);
+        setLoading(false);
       }
     };
 
     fetchSuggestions();
-  }, [user, getAuthToken]); // Add dependencies
+  }, [user, isLoaded, router, getToken]);
+
+  if (!isLoaded || loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} />;
+  }
 
   // Fetch Resources
   useEffect(() => {
     const fetchResources = async () => {
-      setLoadingResources(true);
+      setLoading(true);
       setError(null); // Clear previous errors
       try {
         const url = selectedTag 
@@ -106,7 +100,7 @@ const SuggestionsAndResourcesPage = () => {
 
         if (!response.ok) {
              setError(`Error fetching resources: ${response.statusText}`);
-             setLoadingResources(false);
+             setLoading(false);
              return;
         }
 
@@ -115,20 +109,12 @@ const SuggestionsAndResourcesPage = () => {
       } catch (err: any) {
         setError(err.message);
       } finally {
-        setLoadingResources(false);
+        setLoading(false);
       }
     };
 
     fetchResources();
   }, [selectedTag]); // Rerun when selectedTag changes
-
-  if (authLoading) {
-    return <div className="container mx-auto p-4">Loading...</div>;
-  }
-
-  if (!user) {
-    return null; // Will redirect in useEffect
-  }
 
   return (
     <div className="container mx-auto p-4">
@@ -137,11 +123,11 @@ const SuggestionsAndResourcesPage = () => {
       {/* Suggestions Section */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-3">Further Suggestions</h2>
-        {loadingSuggestions && <p>Loading suggestions...</p>}
+        {loading && <p>Loading suggestions...</p>}
         {error && <p className="text-red-500">Error: {error}</p>}
-        {suggestions && suggestions.suggestions.length > 0 ? (
+        {suggestions.length > 0 ? (
           <div>
-            {suggestions.suggestions.map((suggestion, index) => (
+            {suggestions.map((suggestion, index) => (
               <div key={index} className="bg-white p-4 shadow rounded mb-4">
                 <h3 className="text-lg font-bold">{suggestion.subject}</h3>
                 <p><strong>Related University Courses:</strong> {suggestion.relatedUniversityCourses.join(', ')}</p>
@@ -154,7 +140,7 @@ const SuggestionsAndResourcesPage = () => {
               </div>
             ))}
           </div>
-        ) : (!loadingSuggestions && !error && <p>No suggestions available yet.</p>)}
+        ) : (!loading && !error && <p>No suggestions available yet.</p>)}
       </section>
 
       {/* Resources Section */}
@@ -182,7 +168,7 @@ const SuggestionsAndResourcesPage = () => {
             ))}
         </div>
 
-        {loadingResources && <p>Loading resources...</p>}
+        {loading && <p>Loading resources...</p>}
         {error && <p className="text-red-500">Error: {error}</p>}
         {resources.length > 0 ? (
           <div>
@@ -195,10 +181,8 @@ const SuggestionsAndResourcesPage = () => {
               </div>
             ))}
           </div>
-        ) : (!loadingResources && !error && <p>No resources available yet.</p>)}
+        ) : (!loading && !error && <p>No resources available yet.</p>)}
       </section>
     </div>
   );
-};
-
-export default SuggestionsAndResourcesPage; 
+} 

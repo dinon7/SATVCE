@@ -1,18 +1,178 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# Dependencies
+node_modules/
+*/node_modules/
+*/venv/
 venv/
-ENV/
+test_env/
+
+# Build outputs
+.next/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Environment files
 .env
-.venv
+.env.local
+.env.production
+.env.development
+*.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.coverage
+htmlcov/
 .pytest_cache/
+.tox/
+.cache
+*.cover
+.hypothesis/
+
+# Documentation and testing files (excluding core README)
+*.md
+!README.md
+!package.json
+!package-lock.json
+!requirements.txt
+!pyproject.toml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Backup files
+*.bak
+*.backup
+
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+
+# TypeScript
+*.tsbuildinfo
+
+# Next.js
+.next/
+out/
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+.coverage
 htmlcov/
 
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# Supabase
+.supabase/
+
+# Testing files
+test_*.py
+*_test.py
+test_*.js
+*_test.js
+*_test.ts
+*_test.tsx
+tests/
+test/
+
+# Documentation files
+*.md
+!README.md
+!package.json
+!package-lock.json
+!requirements.txt
+!pyproject.toml
+
+# Implementation summaries and documentation
+*_IMPLEMENTATION*.md
+*_SUMMARY*.md
+*_DOCUMENTATION*.md
+*_DEPLOYMENT*.md
+*_MIGRATION*.md
+*_SETUP*.md
+*_CHECKLIST*.md
+*_STATUS*.md
+*_FIXES*.md
+
+# Template files
+*.template
+.env.template
+.env.local.template
+
+# Scripts and utilities
+fix_imports.py
+run_*.py
+run_*.bat
+run_*.ps1
+run_*.sh
+test_*.py
+test_*.js
+
+# Coverage and testing reports
+coverage.xml
+*.coverage
+.coverage.*
+
+# Development tools
+.cursorignore
+.benchmarks/
+
+# Application logs
+app.log
+*.log
+
+# Database files
+app.db
+*.db
+
+# Build artifacts
+backend.egg-info/
+htmlcov/
+.pytest_cache/
+.coverage
+
 # Node
-node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

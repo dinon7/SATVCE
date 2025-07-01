@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from ..db.database import get_db
-from ..schemas.resource import ResourceCreate, ResourceResponse
-from ..services.resource_service import (
+from db.database import get_db
+from schemas.resource import ResourceCreate, ResourceResponse
+from services.resource_service import (
     get_resources,
     create_resource,
     delete_resource,
     get_resource_by_id
 )
-from ..auth.firebase_auth import get_current_user, admin_check
-from ..schemas.user import User
+from auth.firebase_auth import get_current_user, admin_check
+from schemas.user import User
 
 router = APIRouter(
     prefix="/api/resources",

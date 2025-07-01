@@ -6,6 +6,21 @@ from .database import Base
 from uuid import uuid4
 from datetime import datetime
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, index=True)  # Firebase UID
+    email = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    is_admin = Column(Integer, default=0)  # 0 = False, 1 = True
+    has_completed_quiz = Column(Integer, default=0)  # 0 = False, 1 = True
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    career_reports = relationship("CareerReport", back_populates="user")
+    preferences = relationship("UserPreference", back_populates="user")
+
 class CareerReport(Base):
     __tablename__ = "career_reports"
 
@@ -40,10 +55,10 @@ class Subject(Base):
     scalingScore = Column(Float, nullable=False)
     popularityIndex = Column(Integer, nullable=False)
     difficultyRating = Column(Integer, nullable=False)
-    relatedCareers = Column(ARRAY(String), nullable=False)
-    universityCourses = Column(ARRAY(String), nullable=False)
-    studyTips = Column(ARRAY(String), nullable=False)
-    prerequisites = Column(ARRAY(String), nullable=False)
+    relatedCareers = Column(JSON, nullable=False)
+    universityCourses = Column(JSON, nullable=False)
+    studyTips = Column(JSON, nullable=False)
+    prerequisites = Column(JSON, nullable=False)
     imageUrl = Column(String)
 
     class Config:
@@ -51,17 +66,17 @@ class Subject(Base):
 
 class Resource(Base):
     __tablename__ = "resources"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
     title = Column(String, nullable=False)
     url = Column(String, nullable=False)
     description = Column(String, nullable=False)
-    tags = Column(ARRAY(String), nullable=False)
+    tags = Column(JSON, nullable=False)
     created_by = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Suggestion(Base):
     __tablename__ = "suggestions"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
     user_id = Column(String, nullable=False)
-    suggestions = Column(JSONB, nullable=False)  # Store AI response
+    suggestions = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow) 

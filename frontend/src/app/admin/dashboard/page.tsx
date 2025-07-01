@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { animations } from '@/utils/animations';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
 
 interface DashboardStats {
     totalUsers: number;
@@ -30,69 +31,118 @@ interface PendingResource {
     submittedAt: string;
 }
 
+interface AdminStats {
+    totalUsers: number;
+    activeUsers: number;
+    totalCourses: number;
+    totalResources: number;
+    totalQuizzes: number;
+    totalReports: number;
+}
+
 export default function AdminDashboard() {
     const router = useRouter();
-    const { user, isAdmin } = useAuth();
+    const { user, isLoaded } = useUser();
+    const { getToken } = useAuth();
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [stats, setStats] = useState<AdminStats | null>(null);
     const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
     const [pendingResources, setPendingResources] = useState<PendingResource[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isAdmin) {
-            router.push('/');
-            return;
+        if (isLoaded && !user) {
+            router.push('/sign-in');
         }
+    }, [isLoaded, user, router]);
 
-        const fetchDashboardData = async () => {
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!user) return;
+
             try {
-                // Fetch dashboard statistics
-                const statsResponse = await fetch('/api/admin/stats', {
+                setLoading(true);
+                const token = await getToken();
+                const response = await fetch('/api/admin/stats', {
                     headers: {
-                        'Authorization': `Bearer ${await user?.getIdToken()}`
-                    }
+                        Authorization: `Bearer ${token}`,
+                    },
                 });
-                const statsData = await statsResponse.json();
-                setStats(statsData);
 
-                // Fetch recent activity
-                const activityResponse = await fetch('/api/admin/activity', {
-                    headers: {
-                        'Authorization': `Bearer ${await user?.getIdToken()}`
-                    }
-                });
-                const activityData = await activityResponse.json();
-                setRecentActivity(activityData);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch admin stats');
+                }
 
-                // Fetch pending resources
-                const resourcesResponse = await fetch('/api/admin/pending-resources', {
-                    headers: {
-                        'Authorization': `Bearer ${await user?.getIdToken()}`
-                    }
-                });
-                const resourcesData = await resourcesResponse.json();
-                setPendingResources(resourcesData);
-            } catch (error) {
-                console.error('Error fetching admin dashboard data:', error);
+                const data = await response.json();
+                setStats(data);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to fetch admin stats');
             } finally {
                 setLoading(false);
             }
         };
 
+        fetchStats();
+    }, [user, getToken]);
+
+    useEffect(() => {
+        const fetchRecentActivity = async () => {
+            if (!user) return;
+
+            try {
+                const response = await fetch('/api/admin/activity', {
+                    headers: {
+                        Authorization: `Bearer ${await getToken()}`
+                    }
+                });
+                const data = await response.json();
+                setRecentActivity(data);
+            } catch (error) {
+                console.error('Error fetching recent activity:', error);
+            }
+        };
+
         if (user) {
-            fetchDashboardData();
+            fetchRecentActivity();
         }
-    }, [user, isAdmin, router]);
+    }, [user, getToken]);
+
+    useEffect(() => {
+        const fetchPendingResources = async () => {
+            if (!user) return;
+
+            try {
+                const response = await fetch('/api/admin/pending-resources', {
+                    headers: {
+                        Authorization: `Bearer ${await getToken()}`
+                    }
+                });
+                const data = await response.json();
+                setPendingResources(data);
+            } catch (error) {
+                console.error('Error fetching pending resources:', error);
+            }
+        };
+
+        if (user) {
+            fetchPendingResources();
+        }
+    }, [user, getToken]);
+
+    if (!isLoaded) {
+        return <div>Loading...</div>;
+    }
 
     if (loading) {
-        return (
-            <motion.div
-                className="flex justify-center items-center min-h-screen"
-                {...animations.fadeIn}
-            >
-                <LoadingSpinner />
-            </motion.div>
-        );
+        return <LoadingSpinner />;
+    }
+
+    if (error) {
+        return <ErrorMessage message={error} />;
+    }
+
+    if (!stats) {
+        return <div>No stats available</div>;
     }
 
     return (
@@ -108,7 +158,7 @@ export default function AdminDashboard() {
                 transition={{ duration: 0.5 }}
             >
                 <h1 className="text-3xl font-bold mb-2">
-                    Welcome, Admin {user?.displayName}!
+                    Welcome, Admin {user?.firstName || 'User'}!
                 </h1>
                 <p className="text-purple-100">
                     Manage the VCE Subject Selection & Career Guidance platform.
@@ -131,10 +181,16 @@ export default function AdminDashboard() {
                             color: 'bg-blue-500'
                         },
                         {
+                            title: 'Total Courses',
+                            value: stats.totalCourses,
+                            icon: '📚',
+                            color: 'bg-green-500'
+                        },
+                        {
                             title: 'Total Quizzes',
                             value: stats.totalQuizzes,
                             icon: '📝',
-                            color: 'bg-green-500'
+                            color: 'bg-orange-500'
                         },
                         {
                             title: 'Total Reports',

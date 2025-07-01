@@ -324,12 +324,6 @@ class QuizInitialRequestModel(BaseModel):
     arrAnswers: Dict[str, Any] = Field(..., description="Dictionary of question IDs and their answers")
     dtmSubmitted: datetime = Field(default_factory=datetime.utcnow, description="Timestamp of submission")
 
-class QuizFollowUpRequestModel(BaseModel):
-    """Schema for follow-up quiz answers"""
-    strStudentID: str = Field(..., description="Student's unique identifier")
-    arrAnswers: Dict[str, Any] = Field(..., description="Dictionary of question IDs and their answers")
-    dtmSubmitted: datetime = Field(default_factory=datetime.utcnow, description="Timestamp of submission")
-
 class RecommendationModel(BaseModel):
     """Schema for AI-generated recommendations"""
     strStudentID: str = Field(..., description="Student's unique identifier")

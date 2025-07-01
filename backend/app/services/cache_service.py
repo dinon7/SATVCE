@@ -2,7 +2,7 @@ from typing import Any, Optional
 import json
 from datetime import timedelta
 import redis
-from app.config import settings
+from ..config import settings
 
 class CacheService:
     def __init__(self):

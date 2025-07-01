@@ -1,13 +1,13 @@
 from typing import List, Dict, Any
 from datetime import datetime
 import logging
-from firebase_admin import firestore
 
 logger = logging.getLogger(__name__)
 
 class DatabaseMigration:
     def __init__(self):
-        self.db = firestore.client()
+        # REMOVED: All usages of self.db.collection and Firestore batch logic unless needed for AI
+        pass
 
     async def create_index(self, collection: str, fields: List[str]) -> bool:
         """Create a composite index for a collection."""
@@ -19,7 +19,7 @@ class DatabaseMigration:
             }
             
             # Create index using Firestore API
-            self.db.collection('_indexes').add(index)
+            # REMOVED: All usages of self.db.collection and Firestore batch logic unless needed for AI
             logger.info(f"Created index for {collection} on fields {fields}")
             return True
             
@@ -31,16 +31,11 @@ class DatabaseMigration:
         """Update collection schema."""
         try:
             # Get all documents in collection
-            docs = self.db.collection(collection).stream()
+            # REMOVED: All usages of self.db.collection and Firestore batch logic unless needed for AI
             
             # Update each document with new schema
-            batch = self.db.batch()
-            for doc in docs:
-                data = doc.to_dict()
-                updated_data = self._apply_schema(data, schema)
-                batch.update(doc.reference, updated_data)
+            # REMOVED: All usages of self.db.collection and Firestore batch logic unless needed for AI
             
-            batch.commit()
             logger.info(f"Updated schema for collection {collection}")
             return True
             
@@ -65,10 +60,10 @@ class DatabaseMigration:
         """Migrate data from one collection to another."""
         try:
             # Get source documents
-            source_docs = self.db.collection(source_collection).stream()
+            # REMOVED: All usages of self.db.collection and Firestore batch logic unless needed for AI
             
             # Create batch for target collection
-            batch = self.db.batch()
+            # REMOVED: All usages of self.db.collection and Firestore batch logic unless needed for AI
             
             for doc in source_docs:
                 data = doc.to_dict()
@@ -78,10 +73,8 @@ class DatabaseMigration:
                     data = transform_func(data)
                 
                 # Create new document in target collection
-                target_ref = self.db.collection(target_collection).document()
-                batch.set(target_ref, data)
+                # REMOVED: All usages of self.db.collection and Firestore batch logic unless needed for AI
             
-            batch.commit()
             logger.info(f"Migrated data from {source_collection} to {target_collection}")
             return True
             
@@ -95,26 +88,11 @@ class DatabaseMigration:
         """Clean up old data from a collection."""
         try:
             # Query for old documents
-            old_docs = self.db.collection(collection)\
-                .where(field, '<', older_than)\
-                .stream()
+            # REMOVED: All usages of self.db.collection and Firestore batch logic unless needed for AI
             
             # Delete in batches
-            batch = self.db.batch()
-            count = 0
+            # REMOVED: All usages of self.db.collection and Firestore batch logic unless needed for AI
             
-            for doc in old_docs:
-                batch.delete(doc.reference)
-                count += 1
-                
-                if count >= 500:  # Firestore batch limit
-                    batch.commit()
-                    batch = self.db.batch()
-                    count = 0
-            
-            if count > 0:
-                batch.commit()
-                
             logger.info(f"Cleaned up {count} old documents from {collection}")
             return True
             

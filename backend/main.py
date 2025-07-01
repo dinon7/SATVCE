@@ -13,6 +13,7 @@ Key Features:
 - Efficient request processing
 - Robust validation
 - User-centred design implementation
+- Transaction pooler integration for high-availability data operations
 """
 
 import logging
@@ -25,6 +26,7 @@ import time
 from typing import Dict, Any
 import os
 from dotenv import load_dotenv
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -43,7 +45,7 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI application
 app = FastAPI(
     title="VCE Career Guidance System",
-    description="Backend API for the VCE Career Guidance System",
+    description="Backend API for the VCE Career Guidance System with Transaction Pooler",
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -58,6 +60,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Transaction Pooler Lifecycle Management
+@app.on_event("startup")
+async def startup_event():
+    """Initialize transaction pooler on application startup"""
+    try:
+        from services.transaction_pooler import initialize_transaction_pooler
+        
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+        redis_url = os.getenv("REDIS_URL")  # Optional Redis for caching
+        
+        if supabase_url and supabase_key:
+            await initialize_transaction_pooler(supabase_url, supabase_key, redis_url)
+            logger.info("Transaction pooler initialized successfully")
+        else:
+            logger.warning("Supabase credentials not found - transaction pooler not initialized")
+            
+    except Exception as e:
+        logger.error(f"Failed to initialize transaction pooler: {e}")
+        # Continue without pooler - fallback to direct Supabase calls
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Shutdown transaction pooler on application shutdown"""
+    try:
+        from services.transaction_pooler import shutdown_transaction_pooler
+        await shutdown_transaction_pooler()
+        logger.info("Transaction pooler shutdown successfully")
+    except Exception as e:
+        logger.error(f"Error during transaction pooler shutdown: {e}")
 
 # Request timing middleware
 @app.middleware("http")
@@ -153,29 +186,93 @@ async def general_exception_handler(request: Request, exc: Exception):
         }
     )
 
-# Health check endpoint
+# Enhanced health check endpoint with pooler status
 @app.get("/api/health", tags=["System"])
 async def health_check() -> Dict[str, Any]:
     """
-    Health check endpoint to verify system status.
+    Enhanced health check endpoint to verify system status including transaction pooler.
     
     Returns:
         Dict containing system status information
     """
-    return {
-        "status": "healthy",
-        "version": "1.0.0",
-        "environment": os.getenv("ENVIRONMENT", "development")
-    }
+    try:
+        # Get basic system status
+        system_status = {
+            "status": "healthy",
+            "version": "1.0.0",
+            "environment": os.getenv("ENVIRONMENT", "development"),
+            "timestamp": time.time()
+        }
+        
+        # Check transaction pooler status
+        try:
+            from services.transaction_pooler import get_transaction_pooler
+            pooler = await get_transaction_pooler()
+            pooler_status = await pooler.get_pool_status()
+            
+            system_status["transaction_pooler"] = {
+                "status": "healthy" if pooler_status["running"] else "unhealthy",
+                "running": pooler_status["running"],
+                "circuit_breaker_state": pooler_status["circuit_breaker_state"],
+                "queue_size": pooler_status["queue_size"],
+                "active_transactions": pooler_status["active_transactions"]
+            }
+            
+            # Update overall status if pooler is unhealthy
+            if not pooler_status["running"]:
+                system_status["status"] = "degraded"
+                
+        except Exception as e:
+            logger.warning(f"Transaction pooler health check failed: {e}")
+            system_status["transaction_pooler"] = {
+                "status": "unavailable",
+                "error": str(e)
+            }
+            system_status["status"] = "degraded"
+        
+        return system_status
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "version": "1.0.0",
+            "environment": os.getenv("ENVIRONMENT", "development"),
+            "timestamp": time.time()
+        }
 
 # Import and include routers
-from app.routers import auth, users, careers, resources, quiz
+from routers import auth, users, careers, courses, subjects, quiz, saved_items, resources, tags
 
+# Core application routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(careers.router, prefix="/api/careers", tags=["Careers"])
-app.include_router(resources.router, prefix="/api/resources", tags=["Resources"])
+app.include_router(courses.router, prefix="/api/courses", tags=["Courses"])
+app.include_router(subjects.router, prefix="/api/subjects", tags=["Subjects"])
 app.include_router(quiz.router, prefix="/api/quiz", tags=["Quiz"])
+
+# Enhanced data routers with transaction pooler
+app.include_router(saved_items.router, prefix="/api/saved-items", tags=["Saved Items"])
+app.include_router(resources.router, prefix="/api/resources", tags=["Resources"])
+app.include_router(tags.router, prefix="/api/tags", tags=["Tags"])
+
+# Health check router
+try:
+    from routers import health
+    app.include_router(health.router, prefix="/api", tags=["Health"])
+    logger.info("Health check routes included")
+except ImportError as e:
+    logger.warning(f"Health check routes not available: {e}")
+
+# Transaction pooler monitoring routes
+try:
+    from routers import pooler_monitor
+    app.include_router(pooler_monitor.router, tags=["Pooler Monitor"])
+    logger.info("Transaction pooler monitoring routes included")
+except ImportError as e:
+    logger.warning(f"Transaction pooler monitoring routes not available: {e}")
 
 if __name__ == "__main__":
     import uvicorn

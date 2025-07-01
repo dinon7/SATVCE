@@ -1,9 +1,9 @@
 from datetime import datetime, UTC
 import pytest
 from fastapi.testclient import TestClient
-from app.main import app
-from app.database.models import User
-from app.database.database import get_db, Base, engine
+from backend.app.main import app
+from backend.app.database.models import User
+from backend.app.database.database import get_db, Base, engine
 from sqlalchemy.orm import Session
 
 # Create test database tables

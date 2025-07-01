@@ -1,15 +1,28 @@
-import pytest
+import sys
 import os
+import pytest
 from datetime import datetime, UTC
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
-from app.main import app
-from app.core.config import settings
+from app.database.firestore import FirestoreClient
 
-# Set test environment variables
-os.environ["CORS_ORIGINS"] = "http://localhost:3000,http://localhost:8000"
+# Set test environment variables BEFORE importing app
+os.environ["BACKEND_CORS_ORIGINS"] = '["http://localhost:3000","http://localhost:8000"]'
 os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+os.environ["SUPABASE_URL"] = "https://test.supabase.co"
+os.environ["SUPABASE_KEY"] = "test-key"
+os.environ["CLERK_JWT_ISSUER"] = "https://clerk.test.com"
+os.environ["CLERK_JWT_AUDIENCE"] = "test-audience"
+os.environ["GEMINI_API_KEY"] = "test-gemini-key"
+
+# Add the project root to the Python path BEFORE other imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+print(f"DEBUG: BACKEND_CORS_ORIGINS before import: {os.environ.get('BACKEND_CORS_ORIGINS')}")
+from app.main import app
+from app.core.config import settings
+firestore_db = FirestoreClient
 
 # Mock Firestore client
 @pytest.fixture
@@ -55,7 +68,7 @@ def mock_auth():
         yield mock
 
 # Update CORS settings for testing
-settings.CORS_ORIGINS = ["http://localhost:3000", "http://localhost:8000"]
+settings.BACKEND_CORS_ORIGINS = ["http://localhost:3000", "http://localhost:8000"]
 
 @pytest.fixture(scope="session")
 def test_app():
@@ -140,4 +153,4 @@ def test_career_data():
         "arrCareerPath": ["Junior Data Scientist", "Senior Data Scientist", "Lead Data Scientist"],
         "dtmCreated": datetime.now(UTC),
         "dtmUpdated": datetime.now(UTC)
-    } 
+    }

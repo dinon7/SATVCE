@@ -1,228 +1,162 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/contexts/AuthContext';
-import { animations } from '@/utils/animations';
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { UserButton, useUser } from '@clerk/nextjs';
 
-interface NavItem {
-    label: string;
-    path: string;
-    icon: string;
-    roles: ('student' | 'admin')[];
-}
-
-const studentNavItems: NavItem[] = [
-    { label: 'Dashboard', path: '/dashboard', icon: '📊', roles: ['student'] },
-    { label: 'Career Quiz', path: '/quiz', icon: '🎯', roles: ['student'] },
-    { label: 'Subjects', path: '/subjects', icon: '📚', roles: ['student'] },
-    { label: 'Careers', path: '/careers', icon: '💼', roles: ['student'] },
-    { label: 'Courses', path: '/courses', icon: '🎓', roles: ['student'] },
-    { label: 'Resources', path: '/resources', icon: '📖', roles: ['student'] },
-    { label: 'Preferences', path: '/preferences', icon: '⭐', roles: ['student'] }
-];
-
-const adminNavItems: NavItem[] = [
-    { label: 'Admin Dashboard', path: '/admin/dashboard', icon: '📊', roles: ['admin'] },
-    { label: 'Manage Subjects', path: '/admin/subjects', icon: '📚', roles: ['admin'] },
-    { label: 'Manage Careers', path: '/admin/careers', icon: '💼', roles: ['admin'] },
-    { label: 'Manage Courses', path: '/admin/courses', icon: '🎓', roles: ['admin'] },
-    { label: 'Manage Resources', path: '/admin/resources', icon: '📖', roles: ['admin'] },
-    { label: 'Analytics', path: '/admin/analytics', icon: '📈', roles: ['admin'] },
-    { label: 'Settings', path: '/admin/settings', icon: '⚙️', roles: ['admin'] }
-];
-
-export const Navigation = () => {
-    const router = useRouter();
+export default function Navigation() {
+    const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
-    const { user, isAdmin, signOut } = useAuth();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const { user } = useUser();
 
-    const navItems = isAdmin ? adminNavItems : studentNavItems;
-
-    const handleSignOut = async () => {
-        await signOut();
-        router.push('/');
+    const toggleMenu = () => {
+        setIsOpen(!isOpen);
     };
-
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
-    };
-
-    // Close mobile menu when route changes
-    useEffect(() => {
-        setIsMobileMenuOpen(false);
-    }, [pathname]);
 
     return (
         <nav className="bg-white shadow-lg sticky top-0 z-50">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
                 <div className="flex justify-between items-center h-16">
                     {/* Logo */}
-                    <motion.div
-                        className="flex items-center"
-                        whileHover={{ scale: 1.05 }}
-                        onClick={() => router.push('/')}
-                    >
-                        <span className="text-xl sm:text-2xl font-bold text-blue-600">VCE Guide</span>
-                    </motion.div>
+                    <div className="flex items-center">
+                        <Link href="/" className="text-xl sm:text-2xl font-bold text-blue-600">
+                            VCE Guide
+                        </Link>
+                    </div>
 
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
-                        {user ? (
-                            <>
-                                {navItems.map((item) => (
-                                    <motion.button
-                                        key={item.path}
-                                        className={`px-3 lg:px-4 py-2 rounded-lg flex items-center space-x-2 text-sm lg:text-base ${
-                                            pathname === item.path
-                                                ? 'bg-blue-100 text-blue-600'
-                                                : 'text-gray-600 hover:bg-gray-100'
-                                        }`}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => router.push(item.path)}
-                                    >
-                                        <span className="text-base lg:text-lg">{item.icon}</span>
-                                        <span>{item.label}</span>
-                                    </motion.button>
-                                ))}
-                                <motion.button
-                                    className="px-3 lg:px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm lg:text-base"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleSignOut}
-                                >
-                                    Sign Out
-                                </motion.button>
-                            </>
-                        ) : (
-                            <>
-                                <motion.button
-                                    className="px-3 lg:px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg text-sm lg:text-base"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => router.push('/login')}
-                                >
-                                    Login
-                                </motion.button>
-                                <motion.button
-                                    className="px-3 lg:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm lg:text-base"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => router.push('/signup')}
-                                >
-                                    Sign Up
-                                </motion.button>
-                            </>
-                        )}
+                        <Link
+                            href="/dashboard"
+                            className={`${
+                                pathname === '/dashboard'
+                                    ? 'border-blue-500 text-gray-900'
+                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                            } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                        >
+                            Dashboard
+                        </Link>
+                        <Link
+                            href="/quiz"
+                            className={`${
+                                pathname === '/quiz'
+                                    ? 'border-blue-500 text-gray-900'
+                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                            } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                        >
+                            Quiz
+                        </Link>
+                        <Link
+                            href="/careers"
+                            className={`${
+                                pathname === '/careers'
+                                    ? 'border-blue-500 text-gray-900'
+                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                            } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                        >
+                            Careers
+                        </Link>
                     </div>
 
                     {/* Mobile Menu Button */}
-                    <motion.button
-                        className="md:hidden p-2 rounded-lg hover:bg-gray-100"
-                        whileTap={{ scale: 0.95 }}
-                        onClick={toggleMobileMenu}
-                        aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-                    >
-                        <svg
-                            className="w-6 h-6"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                    <div className="-mr-2 flex items-center sm:hidden">
+                        <button
+                            onClick={toggleMenu}
+                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
                         >
-                            {isMobileMenuOpen ? (
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
+                            <span className="sr-only">Open main menu</span>
+                            {!isOpen ? (
+                                <svg
+                                    className="block h-6 w-6"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M4 6h16M4 12h16M4 18h16"
+                                    />
+                                </svg>
                             ) : (
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 6h16M4 12h16M4 18h16"
-                                />
+                                <svg
+                                    className="block h-6 w-6"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
                             )}
-                        </svg>
-                    </motion.button>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Mobile Menu */}
-                <AnimatePresence>
-                    {isMobileMenuOpen && (
-                        <motion.div
-                            className="md:hidden absolute left-0 right-0 bg-white shadow-lg"
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            <div className="py-2 space-y-1">
-                                {user ? (
-                                    <>
-                                        {navItems.map((item) => (
-                                            <motion.button
-                                                key={item.path}
-                                                className={`w-full px-4 py-3 rounded-lg flex items-center space-x-3 text-sm ${
-                                                    pathname === item.path
-                                                        ? 'bg-blue-100 text-blue-600'
-                                                        : 'text-gray-600 hover:bg-gray-100'
-                                                }`}
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                onClick={() => {
-                                                    router.push(item.path);
-                                                    setIsMobileMenuOpen(false);
-                                                }}
-                                            >
-                                                <span className="text-lg">{item.icon}</span>
-                                                <span>{item.label}</span>
-                                            </motion.button>
-                                        ))}
-                                        <motion.button
-                                            className="w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg text-sm"
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={handleSignOut}
-                                        >
-                                            Sign Out
-                                        </motion.button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <motion.button
-                                            className="w-full px-4 py-3 text-blue-600 hover:bg-blue-50 rounded-lg text-sm"
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={() => {
-                                                router.push('/login');
-                                                setIsMobileMenuOpen(false);
-                                            }}
-                                        >
-                                            Login
-                                        </motion.button>
-                                        <motion.button
-                                            className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={() => {
-                                                router.push('/signup');
-                                                setIsMobileMenuOpen(false);
-                                            }}
-                                        >
-                                            Sign Up
-                                        </motion.button>
-                                    </>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {isOpen && (
+                    <div className="sm:hidden">
+                        <div className="pt-2 pb-3 space-y-1">
+                            <Link
+                                href="/dashboard"
+                                className={`${
+                                    pathname === '/dashboard'
+                                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                        : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700'
+                                } block pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
+                            >
+                                Dashboard
+                            </Link>
+                            <Link
+                                href="/quiz"
+                                className={`${
+                                    pathname === '/quiz'
+                                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                        : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700'
+                                } block pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
+                            >
+                                Quiz
+                            </Link>
+                            <Link
+                                href="/careers"
+                                className={`${
+                                    pathname === '/careers'
+                                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                        : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700'
+                                } block pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
+                            >
+                                Careers
+                            </Link>
+                        </div>
+                        <div className="pt-4 pb-3 border-t border-gray-200">
+                            {user ? (
+                                <div className="flex items-center px-4">
+                                    <UserButton afterSignOutUrl="/sign-in" />
+                                </div>
+                            ) : (
+                                <div className="mt-3 space-y-1">
+                                    <Link
+                                        href="/sign-in"
+                                        className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                                    >
+                                        Sign In
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </nav>
     );
-}; 
+} 

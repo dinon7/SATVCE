@@ -3,18 +3,35 @@
 import Link from 'next/link'
 import { ReactNode } from 'react'
 import { OptimizedImage } from './ui/OptimizedImage'
-import { useAuth } from '@/contexts/AuthContext'
+import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import Navigation from './Navigation'
 
 interface DashboardLayoutProps {
   children: ReactNode
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user } = useAuth();
-  const profileImageUrl = user?.photoURL || '/images/default-avatar-200x200.png';
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.push('/sign-in');
+    }
+  }, [isLoaded, user, router]);
+
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
+
+  const profileImageUrl = user?.imageUrl || '/images/default-avatar-200x200.svg';
+  const displayName = user?.fullName || 'User';
 
   return (
     <div className="relative flex size-full min-h-screen flex-col bg-gray-50 group/design-root overflow-x-hidden" style={{ fontFamily: 'Lexend, "Noto Sans", sans-serif' }}>
+      <Navigation />
       <div className="layout-container flex h-full grow flex-col">
         {/* Using a simple header for now, as GlobalLayout is not suitable with the sidebar */}
         <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#eaedf1] px-10 py-3">
@@ -45,7 +62,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="relative size-10 rounded-full overflow-hidden">
             <OptimizedImage
               src={profileImageUrl}
-              alt={user?.displayName || 'User profile'}
+              alt={displayName}
               fill
               quality={85}
               sizes="40px"

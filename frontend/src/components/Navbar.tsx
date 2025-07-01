@@ -1,54 +1,45 @@
 "use client";
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { UserButton, SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs"
 
 export default function Navbar() {
-  const pathname = usePathname()
-  
-  const isActive = (path: string) => pathname === path
+  const router = useRouter()
 
   return (
     <nav className="bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <Link href="/" className="flex items-center">
-              <span className="text-xl font-bold text-indigo-600">VCE Guide</span>
-            </Link>
-          </div>
-          
+      <div className="container mx-auto px-4">
+        <div className="flex justify-between items-center h-16">
+          <Link href="/dashboard" className="text-xl font-bold text-primary">
+            VCE Guidance
+          </Link>
+
           <div className="flex items-center space-x-4">
-            <Link 
-              href="/quiz" 
-              className={`px-3 py-2 rounded-md text-sm font-medium ${
-                isActive('/quiz') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Take Quiz
-            </Link>
-            <Link 
-              href="/subjects" 
-              className={`px-3 py-2 rounded-md text-sm font-medium ${
-                isActive('/subjects') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Subjects
-            </Link>
-            <Link 
-              href="/resources" 
-              className={`px-3 py-2 rounded-md text-sm font-medium ${
-                isActive('/resources') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Resources
-            </Link>
-            <Link 
-              href="/login" 
-              className="px-3 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
-            >
-              Login
-            </Link>
+            <SignedIn>
+              <Link href="/quiz" className="text-gray-600 hover:text-primary">
+                Take Quiz
+              </Link>
+              <Link href="/subjects" className="text-gray-600 hover:text-primary">
+                Subjects
+              </Link>
+              <Link href="/careers" className="text-gray-600 hover:text-primary">
+                Careers
+              </Link>
+              <Link href="/preferences" className="text-gray-600 hover:text-primary">
+                Preferences
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button variant="ghost">Login</Button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button>Sign Up</Button>
+              </SignUpButton>
+            </SignedOut>
           </div>
         </div>
       </div>

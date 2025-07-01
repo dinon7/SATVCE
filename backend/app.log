@@ -1,0 +1,200 @@
+2025-06-19 10:29:50,836 - app.services.firebase_service - INFO - Running in development mode
+2025-06-19 10:30:18,413 - app.services.firebase_service - INFO - Running in development mode
+2025-06-19 10:30:24,484 - app.services.firebase_service - INFO - Running in development mode
+2025-06-19 10:31:34,167 - main - INFO - Request: GET /api/health Status: 200 Time: 0.002s
+2025-06-19 10:31:38,433 - main - ERROR - HTTP Exception: Not Found
+2025-06-19 10:31:38,434 - main - INFO - Request: GET /favicon.ico Status: 404 Time: 0.002s
+2025-06-26 12:13:50,380 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,382 - main - INFO - Request: GET /health Status: 404 Time: 0.001s
+2025-06-26 12:13:50,386 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,386 - main - INFO - Request: GET /health Status: 404 Time: 0.002s
+2025-06-26 12:13:50,388 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,388 - main - INFO - Request: GET / Status: 404 Time: 0.000s
+2025-06-26 12:13:50,390 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,391 - main - INFO - Request: GET /docs Status: 404 Time: 0.001s
+2025-06-26 12:13:50,393 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,393 - main - INFO - Request: GET /openapi.json Status: 404 Time: 0.001s
+2025-06-26 12:13:50,395 - main - ERROR - HTTP Exception: Not authenticated
+2025-06-26 12:13:50,395 - main - INFO - Request: GET /api/auth/me Status: 401 Time: 0.002s
+2025-06-26 12:13:50,399 - main - ERROR - Validation Error: [{'type': 'missing', 'loc': ('body',), 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.6/v/missing'}]
+2025-06-26 12:13:50,401 - main - INFO - Request: POST /api/auth/register Status: 422 Time: 0.004s
+2025-06-26 12:13:50,404 - main - ERROR - Validation Error: [{'type': 'missing', 'loc': ('body', 'username'), 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.6/v/missing'}, {'type': 'missing', 'loc': ('body', 'password'), 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.6/v/missing'}]
+2025-06-26 12:13:50,406 - main - INFO - Request: POST /api/auth/login Status: 422 Time: 0.002s
+2025-06-26 12:13:50,409 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,410 - main - INFO - Request: GET /api/users/profile Status: 404 Time: 0.001s
+2025-06-26 12:13:50,413 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,413 - main - INFO - Request: PUT /api/users/profile Status: 404 Time: 0.001s
+2025-06-26 12:13:50,418 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,419 - main - INFO - Request: GET /api/users/preferences Status: 404 Time: 0.001s
+2025-06-26 12:13:50,421 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,421 - main - INFO - Request: PUT /api/users/preferences Status: 404 Time: 0.001s
+2025-06-26 12:13:50,426 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,426 - main - INFO - Request: GET /api/careers Status: 404 Time: 0.001s
+2025-06-26 12:13:50,431 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,432 - main - INFO - Request: GET /api/careers/pathways Status: 404 Time: 0.002s
+2025-06-26 12:13:50,437 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,438 - main - INFO - Request: GET /api/careers/recommendations Status: 404 Time: 0.002s
+2025-06-26 12:13:50,443 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,446 - main - INFO - Request: POST /api/careers/quiz Status: 404 Time: 0.003s
+2025-06-26 12:13:50,453 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,454 - main - INFO - Request: GET /api/subjects Status: 404 Time: 0.002s
+2025-06-26 12:13:50,459 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,459 - main - INFO - Request: GET /api/subjects/prerequisites Status: 404 Time: 0.000s
+2025-06-26 12:13:50,467 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,467 - main - INFO - Request: GET /api/subjects/combinations Status: 404 Time: 0.001s
+2025-06-26 12:13:50,474 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,476 - main - INFO - Request: GET /api/resources Status: 404 Time: 0.002s
+2025-06-26 12:13:50,483 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,483 - main - INFO - Request: GET /api/resources/approved Status: 404 Time: 0.003s
+2025-06-26 12:13:50,491 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,493 - main - INFO - Request: POST /api/resources Status: 404 Time: 0.002s
+2025-06-26 12:13:50,502 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,503 - main - INFO - Request: GET /api/admin/stats Status: 404 Time: 0.002s
+2025-06-26 12:13:50,511 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,511 - main - INFO - Request: GET /api/admin/users Status: 404 Time: 0.002s
+2025-06-26 12:13:50,519 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,519 - main - INFO - Request: GET /api/admin/resources Status: 404 Time: 0.000s
+2025-06-26 12:13:50,526 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,527 - main - INFO - Request: GET /api/admin/settings Status: 404 Time: 0.002s
+2025-06-26 12:13:50,531 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,532 - main - INFO - Request: POST /api/ai/analyze Status: 404 Time: 0.002s
+2025-06-26 12:13:50,538 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,538 - main - INFO - Request: POST /api/ai/generate-report Status: 404 Time: 0.001s
+2025-06-26 12:13:50,544 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,545 - main - INFO - Request: GET /api/integration/health Status: 404 Time: 0.001s
+2025-06-26 12:13:50,548 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:13:50,550 - main - INFO - Request: GET /api/integration/status Status: 404 Time: 0.001s
+2025-06-26 12:17:26,079 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,083 - main - INFO - Request: GET /health Status: 404 Time: 0.004s
+2025-06-26 12:17:26,093 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,094 - main - INFO - Request: GET /health Status: 404 Time: 0.002s
+2025-06-26 12:17:26,100 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,103 - main - INFO - Request: GET / Status: 404 Time: 0.003s
+2025-06-26 12:17:26,111 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,112 - main - INFO - Request: GET /docs Status: 404 Time: 0.002s
+2025-06-26 12:17:26,121 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,121 - main - INFO - Request: GET /openapi.json Status: 404 Time: 0.002s
+2025-06-26 12:17:26,130 - main - ERROR - HTTP Exception: Not authenticated
+2025-06-26 12:17:26,133 - main - INFO - Request: GET /api/auth/me Status: 401 Time: 0.003s
+2025-06-26 12:17:26,142 - main - ERROR - Validation Error: [{'type': 'missing', 'loc': ('body',), 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.6/v/missing'}]
+2025-06-26 12:17:26,143 - main - INFO - Request: POST /api/auth/register Status: 422 Time: 0.004s
+2025-06-26 12:17:26,150 - main - ERROR - Validation Error: [{'type': 'missing', 'loc': ('body', 'username'), 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.6/v/missing'}, {'type': 'missing', 'loc': ('body', 'password'), 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.6/v/missing'}]
+2025-06-26 12:17:26,150 - main - INFO - Request: POST /api/auth/login Status: 422 Time: 0.000s
+2025-06-26 12:17:26,158 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,161 - main - INFO - Request: GET /api/users/profile Status: 404 Time: 0.002s
+2025-06-26 12:17:26,167 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,167 - main - INFO - Request: PUT /api/users/profile Status: 404 Time: 0.001s
+2025-06-26 12:17:26,174 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,174 - main - INFO - Request: GET /api/users/preferences Status: 404 Time: 0.000s
+2025-06-26 12:17:26,179 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,181 - main - INFO - Request: PUT /api/users/preferences Status: 404 Time: 0.002s
+2025-06-26 12:17:26,187 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,188 - main - INFO - Request: GET /api/careers Status: 404 Time: 0.001s
+2025-06-26 12:17:26,201 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,203 - main - INFO - Request: GET /api/careers/pathways Status: 404 Time: 0.002s
+2025-06-26 12:17:26,211 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,212 - main - INFO - Request: GET /api/careers/recommendations Status: 404 Time: 0.002s
+2025-06-26 12:17:26,221 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,222 - main - INFO - Request: POST /api/careers/quiz Status: 404 Time: 0.002s
+2025-06-26 12:17:26,230 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,231 - main - INFO - Request: GET /api/subjects Status: 404 Time: 0.001s
+2025-06-26 12:17:26,238 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,240 - main - INFO - Request: GET /api/subjects/prerequisites Status: 404 Time: 0.002s
+2025-06-26 12:17:26,246 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,249 - main - INFO - Request: GET /api/subjects/combinations Status: 404 Time: 0.003s
+2025-06-26 12:17:26,258 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,259 - main - INFO - Request: GET /api/resources Status: 404 Time: 0.002s
+2025-06-26 12:17:26,268 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,269 - main - INFO - Request: GET /api/resources/approved Status: 404 Time: 0.003s
+2025-06-26 12:17:26,277 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,278 - main - INFO - Request: POST /api/resources Status: 404 Time: 0.003s
+2025-06-26 12:17:26,286 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,287 - main - INFO - Request: GET /api/admin/stats Status: 404 Time: 0.003s
+2025-06-26 12:17:26,296 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,296 - main - INFO - Request: GET /api/admin/users Status: 404 Time: 0.001s
+2025-06-26 12:17:26,303 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,304 - main - INFO - Request: GET /api/admin/resources Status: 404 Time: 0.001s
+2025-06-26 12:17:26,309 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,309 - main - INFO - Request: GET /api/admin/settings Status: 404 Time: 0.001s
+2025-06-26 12:17:26,317 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,318 - main - INFO - Request: POST /api/ai/analyze Status: 404 Time: 0.001s
+2025-06-26 12:17:26,325 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,326 - main - INFO - Request: POST /api/ai/generate-report Status: 404 Time: 0.001s
+2025-06-26 12:17:26,333 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,337 - main - INFO - Request: GET /api/integration/health Status: 404 Time: 0.003s
+2025-06-26 12:17:26,344 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:26,346 - main - INFO - Request: GET /api/integration/status Status: 404 Time: 0.003s
+2025-06-26 12:17:33,998 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:17:34,000 - main - INFO - Request: GET / Status: 404 Time: 0.004s
+2025-06-26 12:18:41,202 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,204 - main - INFO - Request: GET /health Status: 404 Time: 0.004s
+2025-06-26 12:18:41,213 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,213 - main - INFO - Request: GET /health Status: 404 Time: 0.001s
+2025-06-26 12:18:41,220 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,221 - main - INFO - Request: GET / Status: 404 Time: 0.002s
+2025-06-26 12:18:41,226 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,227 - main - INFO - Request: GET /docs Status: 404 Time: 0.002s
+2025-06-26 12:18:41,233 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,233 - main - INFO - Request: GET /openapi.json Status: 404 Time: 0.000s
+2025-06-26 12:18:41,240 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,240 - main - INFO - Request: GET /api/v1/auth/me Status: 404 Time: 0.000s
+2025-06-26 12:18:41,248 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,249 - main - INFO - Request: POST /api/v1/auth/register Status: 404 Time: 0.001s
+2025-06-26 12:18:41,254 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,254 - main - INFO - Request: POST /api/v1/auth/login Status: 404 Time: 0.000s
+2025-06-26 12:18:41,262 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,262 - main - INFO - Request: GET /api/v1/users/profile Status: 404 Time: 0.000s
+2025-06-26 12:18:41,271 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,272 - main - INFO - Request: PUT /api/v1/users/profile Status: 404 Time: 0.002s
+2025-06-26 12:18:41,278 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,279 - main - INFO - Request: GET /api/v1/users/preferences Status: 404 Time: 0.001s
+2025-06-26 12:18:41,283 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,285 - main - INFO - Request: PUT /api/v1/users/preferences Status: 404 Time: 0.002s
+2025-06-26 12:18:41,292 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,294 - main - INFO - Request: GET /api/v1/careers Status: 404 Time: 0.002s
+2025-06-26 12:18:41,300 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,300 - main - INFO - Request: GET /api/v1/careers/pathways Status: 404 Time: 0.001s
+2025-06-26 12:18:41,306 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,309 - main - INFO - Request: GET /api/v1/careers/recommendations Status: 404 Time: 0.002s
+2025-06-26 12:18:41,318 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,320 - main - INFO - Request: POST /api/v1/careers/quiz Status: 404 Time: 0.003s
+2025-06-26 12:18:41,331 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,333 - main - INFO - Request: GET /api/v1/subjects Status: 404 Time: 0.004s
+2025-06-26 12:18:41,346 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,348 - main - INFO - Request: GET /api/v1/subjects/prerequisites Status: 404 Time: 0.003s
+2025-06-26 12:18:41,359 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,360 - main - INFO - Request: GET /api/v1/subjects/combinations Status: 404 Time: 0.002s
+2025-06-26 12:18:41,366 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,368 - main - INFO - Request: GET /api/v1/resources Status: 404 Time: 0.002s
+2025-06-26 12:18:41,374 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,374 - main - INFO - Request: GET /api/v1/resources/approved Status: 404 Time: 0.003s
+2025-06-26 12:18:41,383 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,385 - main - INFO - Request: POST /api/v1/resources Status: 404 Time: 0.002s
+2025-06-26 12:18:41,393 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,395 - main - INFO - Request: GET /api/v1/admin/stats Status: 404 Time: 0.002s
+2025-06-26 12:18:41,404 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,407 - main - INFO - Request: GET /api/v1/admin/users Status: 404 Time: 0.003s
+2025-06-26 12:18:41,417 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,420 - main - INFO - Request: GET /api/v1/admin/resources Status: 404 Time: 0.003s
+2025-06-26 12:18:41,429 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,430 - main - INFO - Request: GET /api/v1/admin/settings Status: 404 Time: 0.002s
+2025-06-26 12:18:41,445 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,446 - main - INFO - Request: POST /api/v1/ai/analyze Status: 404 Time: 0.004s
+2025-06-26 12:18:41,457 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,458 - main - INFO - Request: POST /api/v1/ai/generate-report Status: 404 Time: 0.002s
+2025-06-26 12:18:41,468 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,471 - main - INFO - Request: GET /api/integration/health Status: 404 Time: 0.003s
+2025-06-26 12:18:41,482 - main - ERROR - HTTP Exception: Not Found
+2025-06-26 12:18:41,483 - main - INFO - Request: GET /api/integration/status Status: 404 Time: 0.002s
+2025-06-27 14:23:57,746 - main - INFO - Request: GET /api/health Status: 200 Time: 0.002s
+2025-06-27 14:24:02,740 - main - INFO - Request: GET /api/docs Status: 200 Time: 0.000s
+2025-06-27 14:24:06,099 - main - ERROR - HTTP Exception: Not Found
+2025-06-27 14:24:06,099 - main - INFO - Request: GET /api/users/me Status: 404 Time: 0.000s
+2025-06-27 14:24:30,764 - main - INFO - Request: GET /api/openapi.json Status: 200 Time: 0.047s
+2025-06-27 14:24:38,429 - main - INFO - Request: GET /api/openapi.json Status: 200 Time: 0.004s
+2025-06-27 14:27:34,622 - main - INFO - Request: GET /api/openapi.json Status: 200 Time: 0.081s
+2025-06-27 14:28:37,360 - main - INFO - Request: GET /api/openapi.json Status: 200 Time: 0.080s
+2025-06-27 14:28:42,680 - main - ERROR - HTTP Exception: Not authenticated
+2025-06-27 14:28:42,683 - main - INFO - Request: GET /api/users/me Status: 401 Time: 0.003s
+2025-06-27 14:28:47,813 - main - ERROR - HTTP Exception: Failed to get careers: 'SupabaseService' object has no attribute 'client'
+2025-06-27 14:28:47,813 - main - INFO - Request: GET /api/careers/ Status: 500 Time: 0.000s

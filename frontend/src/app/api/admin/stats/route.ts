@@ -1,59 +1,57 @@
 import { NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { auth } from '@clerk/nextjs/server';
 
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-    initializeApp({
-        credential: cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-    });
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+
+// Fallback admin stats for when backend is unavailable
+function getFallbackAdminStats() {
+    return {
+        totalUsers: 0,
+        totalQuizzes: 0,
+        totalReports: 0,
+        activeUsers: 0,
+        totalCourses: 0,
+        totalResources: 0,
+        fallback: true,
+        message: 'Using fallback data - backend unavailable'
+    };
 }
 
-const db = getFirestore();
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
     try {
-        // Get the authorization header
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
+        const { userId } = await auth();
+        
+        if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Verify the token and check admin status
-        const token = authHeader.split('Bearer ')[1];
-        const decodedToken = await getAuth().verifyIdToken(token);
-        
-        if (!decodedToken.isAdmin) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        // Try backend first
+        try {
+            const backendResponse = await fetch(`${BACKEND_URL}/api/v1/admin/stats`, {
+                headers: {
+                    'Authorization': `Bearer ${userId}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (backendResponse.ok) {
+                const data = await backendResponse.json();
+                return NextResponse.json(data);
+            } else if (backendResponse.status === 403) {
+                return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+            } else if (backendResponse.status === 401) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
+        } catch (backendError) {
+            console.warn('Backend unavailable, using fallback admin stats:', backendError);
         }
 
-        // Fetch statistics from Firestore
-        const [
-            usersSnapshot,
-            quizzesSnapshot,
-            reportsSnapshot,
-            activeUsersSnapshot
-        ] = await Promise.all([
-            db.collection('users').count().get(),
-            db.collection('quizResults').count().get(),
-            db.collection('reports').count().get(),
-            db.collection('users')
-                .where('lastActive', '>=', new Date(Date.now() - 24 * 60 * 60 * 1000))
-                .count()
-                .get()
-        ]);
+        // Fallback: Return basic admin stats
+        const fallbackStats = getFallbackAdminStats();
+        return NextResponse.json(fallbackStats);
 
-        return NextResponse.json({
-            totalUsers: usersSnapshot.data().count,
-            totalQuizzes: quizzesSnapshot.data().count,
-            totalReports: reportsSnapshot.data().count,
-            activeUsers: activeUsersSnapshot.data().count,
-        });
     } catch (error) {
         console.error('Error fetching admin stats:', error);
         return NextResponse.json(

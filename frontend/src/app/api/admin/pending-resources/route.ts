@@ -1,20 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-    initializeApp({
-        credential: cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-    });
-}
-
-const db = getFirestore();
+import { 
+    verifyClerkToken, 
+    checkAdminStatus, 
+    getPendingResources, 
+    updateResourceStatus,
+    logAdminActivity 
+} from '@/lib/supabase-admin';
 
 export async function GET(request: Request) {
     try {
@@ -24,25 +15,18 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Verify the token and check admin status
+        // Verify the Clerk token
         const token = authHeader.split('Bearer ')[1];
-        const decodedToken = await getAuth().verifyIdToken(token);
+        const session = await verifyClerkToken(token);
         
-        if (!decodedToken.isAdmin) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        // Check if user is admin
+        const isAdmin = await checkAdminStatus(session.user.id);
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
         }
 
-        // Fetch pending resources from Firestore
-        const resourcesRef = db.collection('resources')
-            .where('status', '==', 'pending')
-            .orderBy('submittedAt', 'desc');
-
-        const snapshot = await resourcesRef.get();
-        const resources = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            submittedAt: doc.data().submittedAt.toDate().toISOString(),
-        }));
+        // Fetch pending resources from Supabase
+        const resources = await getPendingResources();
 
         return NextResponse.json(resources);
     } catch (error) {
@@ -62,12 +46,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Verify the token and check admin status
+        // Verify the Clerk token
         const token = authHeader.split('Bearer ')[1];
-        const decodedToken = await getAuth().verifyIdToken(token);
+        const session = await verifyClerkToken(token);
         
-        if (!decodedToken.isAdmin) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        // Check if user is admin
+        const isAdmin = await checkAdminStatus(session.user.id);
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
         }
 
         // Get the request body
@@ -81,37 +67,31 @@ export async function POST(request: Request) {
             );
         }
 
-        // Update the resource status
-        const resourceRef = db.collection('resources').doc(resourceId);
-        const resourceDoc = await resourceRef.get();
-
-        if (!resourceDoc.exists) {
-            return NextResponse.json(
-                { error: 'Resource not found' },
-                { status: 404 }
-            );
-        }
-
-        if (action === 'approve') {
-            await resourceRef.update({
-                status: 'approved',
-                approvedAt: new Date(),
-                approvedBy: decodedToken.uid,
-            });
-        } else if (action === 'reject') {
-            await resourceRef.update({
-                status: 'rejected',
-                rejectedAt: new Date(),
-                rejectedBy: decodedToken.uid,
-            });
-        } else {
+        if (!['approve', 'reject'].includes(action)) {
             return NextResponse.json(
                 { error: 'Invalid action' },
                 { status: 400 }
             );
         }
 
-        return NextResponse.json({ success: true });
+        // Update the resource status
+        const updatedResource = await updateResourceStatus(
+            resourceId, 
+            action as 'approved' | 'rejected', 
+            session.user.id
+        );
+
+        // Log admin activity
+        await logAdminActivity(session.user.id, `resource_${action}`, {
+            resourceId,
+            action,
+            resourceTitle: updatedResource.title
+        });
+
+        return NextResponse.json({ 
+            success: true, 
+            resource: updatedResource 
+        });
     } catch (error) {
         console.error('Error updating resource status:', error);
         return NextResponse.json(

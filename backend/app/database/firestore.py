@@ -4,8 +4,10 @@ from typing import Optional, Dict, Any
 import json
 from google.cloud import firestore
 from google.oauth2 import service_account
-from app.core.config import settings
+from ..core.config import settings
 from pathlib import Path
+
+# NOTE: This file is now only for AI-related Firestore use. Do not import or use outside AI services.
 
 class FirestoreClient:
     _instance = None
@@ -112,11 +114,4 @@ class FirestoreClient:
             docs = cls.get_instance().collection(collection).where(field, operator, value).get()
             return [doc.to_dict() for doc in docs]
         except Exception as e:
-            raise Exception(f"Failed to query documents: {str(e)}")
-
-# Initialize collections
-db = FirestoreClient.get_instance()
-users = db.collection('users')
-subjects = db.collection('subjects')
-careers = db.collection('careers')
-quiz_results = db.collection('quiz_results') 
+            raise Exception(f"Failed to query documents: {str(e)}") 

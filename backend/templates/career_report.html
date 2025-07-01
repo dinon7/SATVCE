@@ -1,93 +1,431 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Career Report - {{ student_id }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Career Report - VCE Subject Selection & Career Guidance</title>
+    <style>
+        @page {
+            margin: 2.5cm;
+            @top-right {
+                content: "Page " counter(page) " of " counter(pages);
+            }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2cm;
+            font-size: 2.5em;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 0.5cm;
+        }
+        h2 {
+            font-size: 1.8em;
+            margin-top: 1.5cm;
+            margin-bottom: 1cm;
+            border-left: 4px solid #3498db;
+            padding-left: 0.5cm;
+        }
+        h3 {
+            font-size: 1.3em;
+            margin-top: 1cm;
+            margin-bottom: 0.5cm;
+            color: #34495e;
+        }
+        .section {
+            margin-bottom: 2cm;
+        }
+        .selected-careers {
+            margin-bottom: 2cm;
+            padding: 1cm;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #27ae60;
+        }
+        .career-item {
+            margin-bottom: 1cm;
+            padding: 0.5cm;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+        .career-title {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #2c3e50;
+            margin-bottom: 0.3cm;
+        }
+        .subject-card {
+            margin-bottom: 1.5cm;
+            padding: 1cm;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            background-color: #fafbfc;
+        }
+        .subject-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1cm;
+            padding-bottom: 0.5cm;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .subject-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .subject-code {
+            font-size: 1em;
+            color: #6c757d;
+            font-family: monospace;
+        }
+        .subject-description {
+            margin: 1cm 0;
+            line-height: 1.7;
+        }
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3cm;
+            margin: 0.5cm 0;
+        }
+        .tag {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 0.2cm 0.5cm;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1cm;
+            margin: 1cm 0;
+        }
+        .stat-item {
+            padding: 0.5cm;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .stat-label {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 0.2cm;
+        }
+        .stat-value {
+            font-size: 1.1em;
+            color: #2c3e50;
+        }
+        .study-resources {
+            margin-top: 2cm;
+            padding: 1cm;
+            background-color: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        .resource-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .resource-item {
+            margin-bottom: 0.5cm;
+            padding: 0.5cm;
+            background-color: white;
+            border-radius: 5px;
+            border-left: 3px solid #ffc107;
+        }
+        .university-list, .career-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0.5cm 0;
+        }
+        .university-list li, .career-list li {
+            padding: 0.2cm 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        .university-list li:last-child, .career-list li:last-child {
+            border-bottom: none;
+        }
+        .tips-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0.5cm 0;
+        }
+        .tips-list li {
+            padding: 0.3cm 0;
+            border-left: 3px solid #28a745;
+            padding-left: 0.5cm;
+            margin-bottom: 0.3cm;
+        }
+        .prerequisites-list {
+            list-style-type: disc;
+            padding-left: 1cm;
+            margin: 0.5cm 0;
+        }
+        .report-meta {
+            text-align: center;
+            margin-top: 2cm;
+            padding-top: 1cm;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .confidence-score {
+            display: inline-block;
+            background-color: #d4edda;
+            color: #155724;
+            padding: 0.2cm 0.5cm;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-    <h1>Your AI-Powered Career Report</h1>
-    <p class="generated-date">Generated on: {{ generated_date }}</p>
+    <h1>VCE Career Guidance Report</h1>
+    
+    <div class="report-meta">
+        <p><strong>Generated for Student ID:</strong> {{ student_id }}</p>
+        <p><strong>Report Date:</strong> {{ generated_date }}</p>
+    </div>
 
-    {% for subject in recommendations %}
-    <div class="subject-card">
-        <div class="subject-header">
-            <h2 class="subject-name">{{ subject.subjectName }}</h2>
-            <div class="subject-code">{{ subject.subjectCode }}</div>
-        </div>
-
-        <div class="subject-description">
-            {{ subject.subjectDescription }}
-        </div>
-
-        <div class="stats">
-            <div class="stat-item">
-                <h3>Scaling Score</h3>
-                <p>{{ (subject.scalingScore * 100)|round }}%</p>
+    <!-- Summary Statistics -->
+    <div class="section">
+        <h2>Report Summary</h2>
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_careers_selected }}</div>
+                <div class="stat-label">Careers Selected</div>
             </div>
-            <div class="stat-item">
-                <h3>Difficulty Rating</h3>
-                <p>{{ subject.difficultyRating }}/5</p>
+            <div class="stat-card">
+                <div class="stat-number">{{ recommended_subjects|length }}</div>
+                <div class="stat-label">Subjects Recommended</div>
             </div>
-            <div class="stat-item">
-                <h3>Popularity Index</h3>
-                <p>{{ subject.popularityIndex }}/100</p>
-            </div>
-            <div class="stat-item">
-                <h3>Median Salary</h3>
-                <p>${{ subject.jobMarketData.salaryMedian|number_format }}</p>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.0f"|format(confidence_score * 100) }}%</div>
+                <div class="stat-label">Quiz Confidence</div>
             </div>
         </div>
+    </div>
 
-        <div class="section">
+    <!-- Analysis & Reasoning -->
+    {% if reasoning %}
+    <div class="section">
+        <div class="reasoning-section">
+            <h2>Analysis & Reasoning</h2>
+            <p class="reasoning-text">{{ reasoning }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Selected Careers Section -->
+    {% if selected_careers %}
+    <div class="section">
+        <h2>Your Selected Career Paths</h2>
+        {% for career in selected_careers %}
+        <div class="career-card">
+            <div class="career-header">
+                <div class="career-title">{{ career.title }}</div>
+                <div class="confidence-score">{{ "%.0f"|format(career.confidence_score * 100) }}% Match</div>
+            </div>
+            
+            <div class="career-description">
+                {{ career.description }}
+            </div>
+
+            <div class="career-stats">
+                <div class="career-stat">
+                    <div class="career-stat-label">Salary Range</div>
+                    <div class="career-stat-value">{{ career.salary_range }}</div>
+                </div>
+                <div class="career-stat">
+                    <div class="career-stat-label">Job Outlook</div>
+                    <div class="career-stat-value">{{ career.job_outlook }}</div>
+                </div>
+                <div class="career-stat">
+                    <div class="career-stat-label">Work Environment</div>
+                    <div class="career-stat-value">{{ career.work_environment }}</div>
+                </div>
+                <div class="career-stat">
+                    <div class="career-stat-label">Education Requirements</div>
+                    <div class="career-stat-value">{{ career.education_requirements[0] if career.education_requirements else 'Bachelor\'s degree' }}</div>
+                </div>
+            </div>
+
+            {% if career.required_skills %}
+            <div class="skills-section">
+                <h3>Required Skills</h3>
+                <div class="tag-list">
+                    {% for skill in career.required_skills %}
+                    <span class="tag skill-tag">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if career.vce_subjects %}
+            <div class="subjects-section">
+                <h3>Relevant VCE Subjects</h3>
+                <div class="tag-list">
+                    {% for subject in career.vce_subjects %}
+                    <span class="tag subject-tag">{{ subject }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if career.industry_tags %}
+            <div class="industry-section">
+                <h3>Industry Focus</h3>
+                <div class="tag-list">
+                    {% for tag in career.industry_tags %}
+                    <span class="tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Recommended Subjects Section -->
+    {% if recommended_subjects %}
+    <div class="section">
+        <h2>Recommended VCE Subjects</h2>
+        {% for subject in recommended_subjects %}
+        <div class="subject-card">
+            <div class="subject-header">
+                <div class="subject-name">{{ subject }}</div>
+            </div>
+            
+            <div class="subject-description">
+                This subject is recommended based on your career interests and academic strengths. 
+                It will provide a solid foundation for your chosen career paths and help you develop 
+                the necessary skills and knowledge.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Subject Recommendations Section (if available) -->
+    {% if subject_recommendations %}
+    <div class="section">
+        <h2>Detailed Subject Recommendations</h2>
+        {% for subject in subject_recommendations %}
+        <div class="subject-card">
+            <div class="subject-header">
+                <div>
+                    <div class="subject-name">{{ subject.subjectName }}</div>
+                    <div class="subject-code">{{ subject.subjectCode }}</div>
+                </div>
+                <div class="confidence-score">{{ "%.0f"|format(subject.scalingScore * 100) }}% Match</div>
+            </div>
+            
+            <div class="subject-description">
+                {{ subject.subjectDescription }}
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">Scaling Score</div>
+                    <div class="stat-value">{{ "%.1f"|format(subject.scalingScore * 10) }}/10</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Popularity Index</div>
+                    <div class="stat-value">{{ "%.0f"|format(subject.popularityIndex * 100) }}%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Difficulty Rating</div>
+                    <div class="stat-value">{{ "%.1f"|format(subject.difficultyRating * 10) }}/10</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Median Salary</div>
+                    <div class="stat-value">${{ "{:,}".format(subject.jobMarketData.salaryMedian) }}</div>
+                </div>
+            </div>
+
+            {% if subject.relatedCareers %}
             <h3>Related Careers</h3>
-            <div class="tag-list">
+            <ul class="career-list">
                 {% for career in subject.relatedCareers %}
-                <span class="tag">{{ career }}</span>
+                <li>{{ career }}</li>
                 {% endfor %}
-            </div>
-        </div>
+            </ul>
+            {% endif %}
 
-        <div class="section">
-            <h3>Related Universities</h3>
-            <div class="tag-list">
-                {% for uni in subject.relatedUniversities %}
-                <span class="tag">{{ uni }}</span>
+            {% if subject.relatedUniversities %}
+            <h3>Recommended Universities</h3>
+            <ul class="university-list">
+                {% for university in subject.relatedUniversities %}
+                <li>{{ university }}</li>
                 {% endfor %}
-            </div>
-        </div>
+            </ul>
+            {% endif %}
 
-        <div class="section">
-            <h3>Industry Tags</h3>
+            {% if subject.prerequisites %}
+            <h3>Prerequisites</h3>
+            <ul class="prerequisites-list">
+                {% for prereq in subject.prerequisites %}
+                <li>{{ prereq }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if subject.studyTips %}
+            <h3>Study Tips</h3>
+            <ul class="tips-list">
+                {% for tip in subject.studyTips %}
+                <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if subject.jobMarketData.industryTags %}
+            <h3>Industry Focus</h3>
             <div class="tag-list">
                 {% for tag in subject.jobMarketData.industryTags %}
                 <span class="tag">{{ tag }}</span>
                 {% endfor %}
             </div>
+            {% endif %}
         </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
-        <div class="section">
-            <h3>Study Tips</h3>
-            <ul>
-                {% for tip in subject.studyTips %}
-                <li>{{ tip }}</li>
+    <!-- Study Resources Section -->
+    {% if study_resources %}
+    <div class="section">
+        <h2>Recommended Study Resources</h2>
+        <div class="study-resources">
+            <ul class="resource-list">
+                {% for resource in study_resources %}
+                <li class="resource-item">{{ resource }}</li>
                 {% endfor %}
             </ul>
-        </div>
-
-        <div class="section">
-            <h3>Prerequisites</h3>
-            <ul>
-                {% for prereq in subject.prerequisites %}
-                <li>{{ prereq }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="section">
-            <h3>Job Market Trend</h3>
-            <p>{{ subject.jobMarketData.demandTrend }}</p>
         </div>
     </div>
-    {% endfor %}
+    {% endif %}
+
+    <div class="report-meta">
+        <p><em>This report was generated using AI-powered analysis of your quiz responses and career selections.</em></p>
+        <p><em>For personalized guidance, please consult with your school's career counselor.</em></p>
+        <p><em>This report is confidential and intended for educational purposes only.</em></p>
+    </div>
 </body>
 </html> 

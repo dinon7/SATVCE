@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from ..db.database import get_db
-from ..schemas.suggestion import SuggestionResponse
-from ..services.suggestion_service import get_custom_suggestions_for_user
-from ..auth.firebase_auth import get_current_user
-from ..schemas.user import User
+from db.database import get_db
+from schemas.suggestion import SuggestionResponse
+from services.suggestion_service import get_custom_suggestions_for_user
+from auth.firebase_auth import get_current_user
+from schemas.user import User
 
 router = APIRouter(
     prefix="/api/suggestions",

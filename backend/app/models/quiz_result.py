@@ -1,6 +1,6 @@
 from pydantic import BaseModel
-from typing import Dict, List, Optional
-from datetime import datetime
+from typing import Dict, List, Optional, Any
+from datetime import datetime, UTC
 
 class QuizResultBase(BaseModel):
     user_id: str
@@ -25,20 +25,36 @@ class QuizResultInDB(QuizResultBase):
         from_attributes = True
 
 class QuizResult(QuizResultInDB):
-    pass
+    """Quiz result model with improved datetime handling"""
+    id: Optional[str] = None
+    quiz_data: Dict[str, Any]
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if not self.created_at:
+            self.created_at = datetime.now(UTC)
+        if not self.updated_at:
+            self.updated_at = datetime.now(UTC)
+
+    def update_result(self, update_data: Dict[str, Any]):
+        """Update quiz result with improved datetime handling"""
+        for key, value in update_data.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+        update_data['updated_at'] = datetime.now(UTC)
 
 async def create_quiz_result(quiz_data: QuizResultCreate) -> QuizResult:
     """Create a new quiz result."""
     try:
-        from app.database.firestore import quiz_results_collection
-        
         quiz_doc = {
             'user_id': quiz_data.user_id,
             'answers': quiz_data.answers,
             'recommendations': quiz_data.recommendations,
             'score': quiz_data.score,
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow()
+            'created_at': datetime.now(UTC),
+            'updated_at': datetime.now(UTC)
         }
         
         doc_ref = quiz_results_collection.add(quiz_doc)
@@ -51,7 +67,6 @@ async def create_quiz_result(quiz_data: QuizResultCreate) -> QuizResult:
 async def get_quiz_result(result_id: str) -> Optional[QuizResult]:
     """Get a quiz result by ID."""
     try:
-        from app.database.firestore import quiz_results_collection
         result_doc = quiz_results_collection.document(result_id).get()
         if result_doc.exists:
             return QuizResult(**{**result_doc.to_dict(), 'id': result_doc.id})
@@ -62,7 +77,6 @@ async def get_quiz_result(result_id: str) -> Optional[QuizResult]:
 async def get_user_quiz_results(user_id: str) -> List[QuizResult]:
     """Get all quiz results for a user."""
     try:
-        from app.database.firestore import quiz_results_collection
         results = quiz_results_collection.where('user_id', '==', user_id).get()
         return [QuizResult(**{**doc.to_dict(), 'id': doc.id}) for doc in results]
     except Exception as e:
@@ -71,11 +85,10 @@ async def get_user_quiz_results(user_id: str) -> List[QuizResult]:
 async def update_quiz_result(result_id: str, quiz_data: QuizResultUpdate) -> Optional[QuizResult]:
     """Update a quiz result."""
     try:
-        from app.database.firestore import quiz_results_collection
         result_ref = quiz_results_collection.document(result_id)
         
         update_data = quiz_data.dict(exclude_unset=True)
-        update_data['updated_at'] = datetime.utcnow()
+        update_data['updated_at'] = datetime.now(UTC)
         
         result_ref.update(update_data)
         result_doc = result_ref.get()
@@ -89,7 +102,6 @@ async def update_quiz_result(result_id: str, quiz_data: QuizResultUpdate) -> Opt
 async def delete_quiz_result(result_id: str) -> bool:
     """Delete a quiz result."""
     try:
-        from app.database.firestore import quiz_results_collection
         quiz_results_collection.document(result_id).delete()
         return True
     except Exception as e:

@@ -1,180 +1,130 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Button } from '../Button';
-import { animations } from '@/styles/animations';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@clerk/nextjs';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
 
 interface Task {
     id: string;
     title: string;
-    description: string;
-    status: 'pending' | 'in-progress' | 'completed';
-    dueDate: string;
-    userId: string;
+    completed: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
-export const TaskList = () => {
-    const { user } = useAuth();
+export default function TaskList() {
+    const { user, isLoaded } = useUser();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchTasks = async () => {
-            if (!user) return;
+    const fetchTasks = async () => {
+        try {
+            const response = await fetch('/api/tasks');
 
-            try {
-                const response = await fetch('/api/tasks', {
-                    headers: {
-                        'Authorization': `Bearer ${await user.getIdToken()}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch tasks');
-                }
-
-                const data = await response.json();
-                setTasks(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'An error occurred');
-            } finally {
-                setLoading(false);
+            if (!response.ok) {
+                throw new Error('Failed to fetch tasks');
             }
-        };
+
+            const data = await response.json();
+            setTasks(data);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An error occurred');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!isLoaded) return;
+
+        if (!user) {
+            return;
+        }
 
         fetchTasks();
-    }, [user]);
+    }, [user, isLoaded]);
 
-    const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
-        if (!user) return;
-
+    const toggleTask = async (taskId: string) => {
         try {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
             const response = await fetch(`/api/tasks/${taskId}`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${await user.getIdToken()}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ status: newStatus })
+                body: JSON.stringify({
+                    completed: !task.completed,
+                }),
             });
 
             if (!response.ok) {
                 throw new Error('Failed to update task');
             }
 
-            setTasks(prev => prev.map(task => 
-                task.id === taskId ? { ...task, status: newStatus } : task
-            ));
+            fetchTasks();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         }
     };
 
-    const handleDelete = async (taskId: string) => {
-        if (!user) return;
-
+    const deleteTask = async (taskId: string) => {
         try {
             const response = await fetch(`/api/tasks/${taskId}`, {
                 method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${await user.getIdToken()}`
-                }
             });
 
             if (!response.ok) {
                 throw new Error('Failed to delete task');
             }
 
-            setTasks(prev => prev.filter(task => task.id !== taskId));
+            fetchTasks();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
-            </div>
-        );
+    if (!isLoaded || loading) {
+        return <LoadingSpinner />;
     }
 
     if (error) {
-        return (
-            <div className="text-center py-8">
-                <p className="text-error-600">{error}</p>
-                <Button
-                    variant="primary"
-                    onClick={() => window.location.reload()}
-                    className="mt-4"
-                >
-                    Retry
-                </Button>
-            </div>
-        );
+        return <ErrorMessage message={error} />;
     }
 
     if (tasks.length === 0) {
-        return (
-            <div className="text-center py-8">
-                <p className="text-gray-600">No tasks found. Create your first task!</p>
-            </div>
-        );
+        return <div className="text-center text-gray-500">No tasks yet</div>;
     }
 
-    const getStatusColor = (status: Task['status']) => {
-        switch (status) {
-            case 'completed':
-                return 'bg-green-100 text-green-800';
-            case 'in-progress':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'pending':
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
     return (
-        <motion.div
-            className="space-y-4"
-            variants={animations.stagger.container}
-        >
-            {tasks.map((task, index) => (
-                <motion.div
+        <div className="space-y-2">
+            {tasks.map((task) => (
+                <div
                     key={task.id}
-                    className="flex items-center justify-between p-4 bg-white border rounded-lg"
-                    variants={animations.stagger.item}
-                    whileHover={animations.interactive.hover}
+                    className="flex items-center justify-between p-4 bg-white rounded shadow"
                 >
-                    <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{task.title}</h4>
-                        <p className="text-sm text-gray-600">{task.description}</p>
-                        <div className="flex items-center space-x-4 mt-2">
-                            <select
-                                value={task.status}
-                                onChange={(e) => handleStatusChange(task.id, e.target.value as Task['status'])}
-                                className={`px-2 py-1 rounded-full text-xs ${getStatusColor(task.status)} border-0 focus:ring-2 focus:ring-primary-500`}
-                            >
-                                <option value="pending">Pending</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                            </select>
-                            <span className="text-xs text-gray-500">
-                                Due: {new Date(task.dueDate).toLocaleDateString()}
-                            </span>
-                        </div>
+                    <div className="flex items-center space-x-4">
+                        <input
+                            type="checkbox"
+                            checked={task.completed}
+                            onChange={() => toggleTask(task.id)}
+                            className="h-4 w-4 text-blue-500"
+                        />
+                        <span className={task.completed ? 'line-through text-gray-500' : ''}>
+                            {task.title}
+                        </span>
                     </div>
-                    <div className="flex space-x-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(task.id)}
-                        >
-                            Delete
-                        </Button>
-                    </div>
-                </motion.div>
+                    <button
+                        onClick={() => deleteTask(task.id)}
+                        className="text-red-500 hover:text-red-700"
+                    >
+                        Delete
+                    </button>
+                </div>
             ))}
-        </motion.div>
+        </div>
     );
-}; 
+} 

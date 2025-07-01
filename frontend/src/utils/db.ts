@@ -42,5 +42,13 @@ export const dbUtils = {
       id: doc.id,
       ...doc.data()
     }));
+  },
+
+  async add(collection: string, data: any) {
+    const docRef = await db.collection(collection).add(data);
+    return {
+      id: docRef.id,
+      ...data
+    };
   }
 }; 

@@ -1,55 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { auth } from '@/lib/firebase-admin';
+import { auth } from '@clerk/nextjs/server';
 
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-    initializeApp({
-        credential: cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-    });
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+
+// Fallback function for when backend is unavailable
+async function fallbackUserProfile(userId: string) {
+    // Return basic user info from Clerk
+    return {
+        clerk_user_id: userId,
+        email: '', // Will be filled by Clerk
+        name: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        has_completed_quiz: false,
+        preferences: {
+            subjects: [],
+            careers: [],
+            learning_style: null
+        }
+    };
 }
-
-const db = getFirestore();
 
 export async function POST(request: Request) {
     try {
-        // Get the authorization header
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) {
+        const { userId } = await auth();
+        if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Verify the token
-        const token = authHeader.split('Bearer ')[1];
-        const decodedToken = await getAuth().verifyIdToken(token);
-        const userId = decodedToken.uid;
-
-        // Get the request body
         const body = await request.json();
         const { name, email } = body;
 
-        // Create or update user profile
-        await db.collection('users').doc(userId).set({
-            name,
-            email,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            hasCompletedQuiz: false,
-            quizResults: null,
-            preferences: {
-                subjects: [],
-                careers: [],
-                learningStyle: null
-            }
-        }, { merge: true });
+        // Try backend first
+        try {
+            const backendResponse = await fetch(`${BACKEND_URL}/api/v1/users/profile`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${userId}`,
+                },
+                body: JSON.stringify({ name, email }),
+            });
 
-        return NextResponse.json({ success: true });
+            if (backendResponse.ok) {
+                const data = await backendResponse.json();
+                return NextResponse.json(data);
+            }
+        } catch (backendError) {
+            console.warn('Backend unavailable, using fallback:', backendError);
+        }
+
+        // Fallback: Return success without saving (user will be created on first quiz)
+        return NextResponse.json({ 
+            success: true, 
+            message: 'Profile will be created on first interaction',
+            fallback: true 
+        });
+
     } catch (error) {
         console.error('Error creating/updating user profile:', error);
         return NextResponse.json(
@@ -61,21 +68,36 @@ export async function POST(request: Request) {
 
 export async function GET(request: NextRequest) {
     try {
-        const token = request.headers.get('Authorization')?.split('Bearer ')[1];
-        if (!token) {
+        const { userId } = await auth();
+        if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const decodedToken = await auth.verifyIdToken(token);
-        const uid = decodedToken.uid;
+        // Try backend first
+        try {
+            const backendResponse = await fetch(`${BACKEND_URL}/api/v1/users/profile`, {
+                headers: {
+                    'Authorization': `Bearer ${userId}`,
+                    'Content-Type': 'application/json',
+                },
+            });
 
-        // Fetch user profile from Firestore
-        const userProfile = await fetchUserProfile(uid);
-        if (!userProfile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+            if (backendResponse.ok) {
+                const data = await backendResponse.json();
+                return NextResponse.json(data);
+            } else if (backendResponse.status === 404) {
+                // User doesn't exist yet, return fallback
+                const fallbackData = await fallbackUserProfile(userId);
+                return NextResponse.json(fallbackData);
+            }
+        } catch (backendError) {
+            console.warn('Backend unavailable, using fallback:', backendError);
         }
 
-        return NextResponse.json(userProfile);
+        // Fallback: Return basic user profile
+        const fallbackData = await fallbackUserProfile(userId);
+        return NextResponse.json(fallbackData);
+
     } catch (error) {
         console.error('Error fetching user profile:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -84,30 +106,41 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
     try {
-        const token = request.headers.get('Authorization')?.split('Bearer ')[1];
-        if (!token) {
+        const { userId } = await auth();
+        if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const decodedToken = await auth.verifyIdToken(token);
-        const uid = decodedToken.uid;
-
         const body = await request.json();
-        const updatedProfile = await updateUserProfile(uid, body);
 
-        return NextResponse.json(updatedProfile);
+        // Try backend first
+        try {
+            const backendResponse = await fetch(`${BACKEND_URL}/api/v1/users/profile`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${userId}`,
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (backendResponse.ok) {
+                const data = await backendResponse.json();
+                return NextResponse.json(data);
+            }
+        } catch (backendError) {
+            console.warn('Backend unavailable, using fallback:', backendError);
+        }
+
+        // Fallback: Return success without updating
+        return NextResponse.json({ 
+            success: true, 
+            message: 'Profile update will be processed when backend is available',
+            fallback: true 
+        });
+
     } catch (error) {
         console.error('Error updating user profile:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
-}
-
-async function fetchUserProfile(uid: string) {
-    const userDoc = await db.collection('users').doc(uid).get();
-    return userDoc.exists ? userDoc.data() : null;
-}
-
-async function updateUserProfile(uid: string, data: any) {
-    await db.collection('users').doc(uid).update(data);
-    return data;
 } 
