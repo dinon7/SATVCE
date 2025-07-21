@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-jose
+passlib
+python-multipart
+firebase-admin
+google-cloud-firestore
+google-cloud-storage
+httpx
+python-dotenv
+pydantic
+aiofiles
+reportlab
+bcrypt
+sqlalchemy

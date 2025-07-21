@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@clerk/nextjs": "^6.25.3",
+    "@supabase/mcp-server-supabase": "^0.4.5",
+    "framer-motion": "^12.23.3",
+    "next-pwa": "^5.6.0"
+  },
+  "devDependencies": {
+    "dotenv": "^17.2.0"
+  }
+}
