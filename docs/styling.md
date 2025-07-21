@@ -748,3 +748,257 @@ export function useConditionalFeatures() {
 This cross-platform approach ensures your VCE career guidance app provides an excellent experience whether users access it on their phone, tablet, or desktop computer. The PWA features also allow mobile users to install the app like a native application.
 
 Would you like me to start implementing any specific part of this cross-platform strategy?
+
+Excellent idea! Combining your design system with ReactBits' animated components would give you the best of both worlds. Let me analyze how this would work and create a hybrid plan.
+
+Read file: docs/styling.md
+## **🎯 Hybrid Plan: Your Design System + ReactBits Animated Components**
+
+This is actually a brilliant approach! Here's how we can combine them effectively:
+
+### **💡 Why This Combination Works Perfectly**
+
+**Your Design System (`mobile_design_system.json`):**
+- ✅ Complete visual specifications (colors, typography, spacing)
+- ✅ Accessibility standards (44px touch targets, focus states)
+- ✅ Responsive breakpoints and mobile-first approach
+- ✅ CSS custom properties for theming
+
+**ReactBits Animated Components:**
+- ✅ Pre-built animations and micro-interactions
+- ✅ Touch gesture support (swipe, pinch, etc.)
+- ✅ Performance-optimized animations
+- ✅ Cross-platform compatibility
+- ✅ Accessibility-focused animations
+
+### **🔧 Hybrid Implementation Strategy**
+
+#### **Phase 1: Foundation Setup**
+
+**1. Install ReactBits Dependencies**
+```bash
+npm install @reactbits/ui framer-motion react-spring
+```
+
+**2. Update Tailwind Config with Your Design System**
+- Import your color palette, typography, spacing
+- Add your breakpoints and animations
+- Set up CSS custom properties
+
+**3. Create Hybrid Component Architecture**
+```typescript
+// Base components using your design system
+// Animated wrappers using ReactBits
+```
+
+#### **Phase 2: Component Implementation Priority**
+
+| Component | Your Design System | ReactBits Animation | Hybrid Approach |
+|-----------|-------------------|-------------------|-----------------|
+| **Button** | Visual specs, variants | Hover animations, ripple effects | Your styling + ReactBits animations |
+| **Card** | Layout, shadows, variants | Hover lift, entrance animations | Your design + ReactBits motion |
+| **Career Swipe** | Touch targets, layout | Swipe gestures, spring physics | Your design + ReactBits swipe |
+| **Quiz Interface** | Typography, spacing | Progress animations, transitions | Your design + ReactBits transitions |
+| **Navigation** | Your mobile nav specs | Slide animations, gesture support | Your design + ReactBits navigation |
+
+#### **Phase 3: Specific Component Plans**
+
+**1. Button Component**
+```typescript
+// Your design system for visual specs
+const buttonStyles = {
+  // Your color palette, typography, spacing
+}
+
+// ReactBits for animations
+const Button = ({ variant, size, children, ...props }) => {
+  return (
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className={buttonStyles[variant][size]}
+      {...props}
+    >
+      {children}
+    </motion.button>
+  )
+}
+```
+
+**2. Career Swipe Cards**
+```typescript
+// Your design system for card layout
+const cardStyles = {
+  // Your spacing, shadows, typography
+}
+
+// ReactBits for swipe gestures
+const CareerCard = ({ career, onSwipe }) => {
+  const swipeHandlers = useSwipe(onSwipe)
+  
+  return (
+    <motion.div
+      className={cardStyles.elevated}
+      drag="x"
+      dragConstraints={{ left: -100, right: 100 }}
+      onDragEnd={swipeHandlers.onDragEnd}
+    >
+      {/* Your design system content */}
+    </motion.div>
+  )
+}
+```
+
+**3. Quiz Progress Animations**
+```typescript
+// Your design system for progress bar
+const progressStyles = {
+  // Your colors, spacing, typography
+}
+
+// ReactBits for smooth progress animations
+const QuizProgress = ({ progress }) => {
+  return (
+    <motion.div
+      className={progressStyles.base}
+      initial={{ width: 0 }}
+      animate={{ width: `${progress}%` }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    />
+  )
+}
+```
+
+### **🎨 Design System Integration Strategy**
+
+**1. Color System Integration**
+```typescript
+// Use your CSS custom properties
+const theme = {
+  primary: 'var(--color-primary)',
+  secondary: 'var(--color-secondary)',
+  // ... rest of your palette
+}
+
+// ReactBits components use your theme
+const AnimatedButton = styled(motion.button)`
+  background-color: ${theme.primary};
+  // ... rest of your design system
+`
+```
+
+**2. Responsive Animation Strategy**
+```typescript
+// Your breakpoints + ReactBits responsive animations
+const useResponsiveAnimation = () => {
+  const { isMobile } = useDeviceType()
+  
+  return {
+    // Reduce animations on mobile for performance
+    animationIntensity: isMobile ? 0.5 : 1,
+    // Use touch gestures only on mobile
+    enableGestures: isMobile,
+  }
+}
+```
+
+**3. Accessibility Integration**
+```typescript
+// Your accessibility standards + ReactBits a11y
+const AccessibleAnimatedButton = ({ children, ...props }) => {
+  return (
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      // Your 44px touch target
+      style={{ minHeight: '44px', minWidth: '44px' }}
+      // ReactBits accessibility
+      aria-label={props['aria-label']}
+      {...props}
+    >
+      {children}
+    </motion.button>
+  )
+}
+```
+
+### **📱 Mobile-First Animation Strategy**
+
+**1. Performance Optimization**
+```typescript
+// Your mobile performance specs + ReactBits optimization
+const MobileOptimizedAnimation = ({ children }) => {
+  const { isMobile } = useDeviceType()
+  
+  return (
+    <motion.div
+      // Reduce motion on mobile for performance
+      transition={{ duration: isMobile ? 0.2 : 0.3 }}
+      // Your mobile-first approach
+      className={isMobile ? 'mobile-optimized' : 'desktop-enhanced'}
+    >
+      {children}
+    </motion.div>
+  )
+}
+```
+
+**2. Touch Gesture Integration**
+```typescript
+// Your touch targets + ReactBits gestures
+const SwipeableCard = ({ onSwipeLeft, onSwipeRight }) => {
+  const { isTouch } = useDeviceType()
+  
+  return (
+    <motion.div
+      // Your 44px touch target
+      style={{ minHeight: '44px' }}
+      // ReactBits swipe gestures
+      drag={isTouch ? "x" : false}
+      dragConstraints={{ left: -100, right: 100 }}
+      onDragEnd={handleSwipe}
+    >
+      {/* Your design system content */}
+    </motion.div>
+  )
+}
+```
+
+### **🚀 Implementation Order**
+
+**Phase 1: Foundation (Week 1)**
+1. Set up ReactBits + your design system
+2. Create base animated components
+3. Update Tailwind config with your specs
+4. Test build and fix any conflicts
+
+**Phase 2: Core Components (Week 2)**
+1. Animated Button (your design + ReactBits hover)
+2. Animated Card (your design + ReactBits lift)
+3. Quiz Progress (your design + ReactBits progress)
+4. Navigation (your design + ReactBits slide)
+
+**Phase 3: Advanced Features (Week 3)**
+1. Career Swipe (your design + ReactBits swipe)
+2. Quiz Transitions (your design + ReactBits page transitions)
+3. Loading States (your design + ReactBits skeleton)
+4. Toast Notifications (your design + ReactBits toast)
+
+**Phase 4: Optimization (Week 4)**
+1. Performance testing on mobile
+2. Accessibility validation
+3. Cross-browser testing
+4. Animation performance optimization
+
+### **✅ Benefits of This Hybrid Approach**
+
+1. **Perfect Design Fidelity** - Your design system ensures visual consistency
+2. **Smooth Animations** - ReactBits provides professional animations
+3. **Mobile Performance** - Optimized for touch devices
+4. **Accessibility** - Both systems prioritize a11y
+5. **Future-Proof** - Easy to extend and maintain
+6. **Best of Both Worlds** - Your control + ReactBits expertise
+
+**This hybrid approach gives you the visual precision of your design system with the animation expertise of ReactBits, creating a truly professional and engaging user experience.**
+
+Would you like me to start implementing this hybrid approach, beginning with the foundation setup?
